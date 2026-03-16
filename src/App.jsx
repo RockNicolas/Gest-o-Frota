@@ -13,7 +13,6 @@ function App() {
   });
 
   const [form, setForm] = useState({ nome: '', tipo: 'Diesel', categoria: 'Máquina', valor: 0, litros: 0 });
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
 
@@ -31,15 +30,46 @@ function App() {
   const remover = (id) => setRegistros(registros.filter(r => r.id !== id));
 
   const abrirEdicao = (item) => {
-    setItemEditando({ ...item });
+    setItemEditando({ 
+      ...item, 
+      custo: formatarMoedaBR(item.custo) 
+    });
     setIsModalOpen(true);
   };
 
   const salvarEdicao = () => {
-    const novaLista = registros.map(r => r.id === itemEditando.id ? { ...itemEditando, custo: Number(itemEditando.custo) } : r);
+    const novaLista = registros.map(r => 
+      r.id === itemEditando.id 
+        ? { 
+            ...itemEditando, 
+            custo: stringParaNumero(itemEditando.custo), 
+            valor: Number(itemEditando.valor),
+            litros: Number(itemEditando.litros)
+          } 
+        : r
+    );
     setRegistros(novaLista);
     setIsModalOpen(false);
   };
+
+const formatarMoedaBR = (valor) => {
+  const n = Number(valor);
+  if (isNaN(n)) return "0,00";
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const aplicarMascaraDinheiro = (valor) => {
+  let v = String(valor).replace(/\D/g, ""); 
+  if (!v) return "0,00";
+  v = (Number(v) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return v;
+};
+
+const stringParaNumero = (str) => {
+  if (typeof str === 'number') return str;
+  if (!str) return 0;
+  return Number(str.replace(/\./g, '').replace(',', '.'));
+};
 
   const maquinas = registros.filter(r => r.categoria === 'Máquina');
   const veiculos = registros.filter(r => r.categoria === 'Veículo');
@@ -84,9 +114,9 @@ function App() {
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Painel de Controle</p>
             </div>
           </div>
-          <button onClick={gerarPDF} className="w-full md:w-auto bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 uppercase text-xs tracking-widest text-center">
+        {/*<button onClick={gerarPDF} className="w-full md:w-auto bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 uppercase text-xs tracking-widest text-center">
             <Download size={18}/> Gerar Relatório
-          </button>
+          </button> */}
         </div>
 
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 text-left">
@@ -127,7 +157,7 @@ function App() {
                 <TrendingUp size={14}/> Monte Cristo Frotas
               </div>
             </div>
-            <div className="flex flex-col mb-2 border-b border-white/10 pb-2 items-end -mr-45">
+            <div className="flex flex-col mb-2 border-b border-white/10 pb-2 items-end -mr-30">
               <p className="text-[18px] font-bold text-slate-400 uppercase tracking-wider">
                 Gasolina: <span className="text-white">R$ 6,15</span>
               </p>
@@ -137,7 +167,9 @@ function App() {
             </div>
             <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Acumulado</p>
-              <p className="text-3xl font-black text-red-500">R$ {totalGeral.toFixed(2)}</p>
+              <p className="text-3xl font-black text-red-500">
+                R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
 
@@ -187,11 +219,11 @@ function App() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-blue-500 shadow-sm">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Diesel Total (Lts)</span>
-                  <span className="font-black text-xl">{litrosDiesel.toFixed(1)} L</span>
+                  <span className="font-black text-xl">{litrosDiesel.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
                 </div>
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-green-500 shadow-sm">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Gasolina Total (Lts)</span>
-                  <span className="font-black text-xl">{litrosGasolina.toFixed(1)} L</span>
+                  <span className="font-black text-xl">{litrosGasolina.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
                 </div>
               </div>
 
@@ -208,11 +240,15 @@ function App() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-500 shadow-lg border border-slate-100">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Total Diesel (R$)</span>
-                  <span className="font-black text-xl text-red-600">R$ {custoDiesel.toFixed(2)}</span>
+                  <span className="font-black text-xl text-red-600">
+                    R$ {custoDiesel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-600 shadow-lg border border-slate-100">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Total Gasolina (R$)</span>
-                  <span className="font-black text-xl text-red-600">R$ {custoGasolina.toFixed(2)}</span>
+                  <span className="font-black text-xl text-red-600">
+                    R$ {custoGasolina.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -237,11 +273,14 @@ function App() {
                   <DollarSign size={12}/> VALOR TOTAL EM DINHEIRO (R$)
                 </label>
                 <input 
-                  type="number" 
-                  step="0.001" 
+                  type="text" 
+                  step="0.01" 
                   className="w-full bg-red-50 border border-red-100 p-4 rounded-2xl outline-none font-black text-2xl text-center text-red-600 focus:ring-2 focus:ring-red-500" 
                   value={itemEditando.custo} 
-                  onChange={e => setItemEditando({...itemEditando, custo: e.target.value})}
+                  onChange={e => setItemEditando({
+                    ...itemEditando, 
+                    custo: aplicarMascaraDinheiro(e.target.value) 
+                  })}
                 />
               </div>
 
