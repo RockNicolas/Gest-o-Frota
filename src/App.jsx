@@ -124,8 +124,16 @@ function App() {
             <div>
               <h2 className="text-4xl font-black uppercase tracking-tighter italic">Relatório Semanal</h2>
               <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
-                <TrendingUp size={14}/> Monte Cristo Operações
+                <TrendingUp size={14}/> Monte Cristo Frotas
               </div>
+            </div>
+            <div className="flex flex-col mb-2 border-b border-white/10 pb-2 items-end -mr-45">
+              <p className="text-[18px] font-bold text-slate-400 uppercase tracking-wider">
+                Gasolina: <span className="text-white">R$ 6,15</span>
+              </p>
+              <p className="text-[18px] font-bold text-slate-400 uppercase tracking-wider">
+                Diesel: <span className="text-white">R$ 5,79</span>
+              </p>
             </div>
             <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Acumulado</p>
