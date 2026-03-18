@@ -4,15 +4,12 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 function App() {
-  const PRECO_GASOLINA = 6.15;
-  const PRECO_DIESEL = 5.79;
-
   const [registros, setRegistros] = useState(() => {
     const salvo = localStorage.getItem('registros_montecristo');
     return salvo ? JSON.parse(salvo) : [];
   });
 
-  const [form, setForm] = useState({ nome: '', tipo: 'Diesel', categoria: 'Máquina', valor: 0, litros: 0 });
+  const [form, setForm] = useState({ nome: '', motorista: '', tipo: 'Diesel', categoria: 'Máquina', valor: 0, litros: 0, precoLitro: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
 
@@ -22,32 +19,32 @@ function App() {
 
   const adicionar = (e) => {
     e.preventDefault();
-    const custo = form.tipo === 'Gasolina' ? form.litros * PRECO_GASOLINA : form.litros * PRECO_DIESEL;
+    const custo = Number(form.litros) * Number(form.precoLitro);
     setRegistros([...registros, { ...form, id: Date.now(), custo }]);
-    setForm({ ...form, nome: '', valor: 0, litros: 0 });
+    setForm({ ...form, nome: '', motorista: '', valor: 0, litros: 0, precoLitro: 0 });
   };
 
   const remover = (id) => setRegistros(registros.filter(r => r.id !== id));
 
   const abrirEdicao = (item) => {
-    setItemEditando({ 
-      ...item, 
-      custo: formatarMoedaBR(item.custo) 
-    });
+    setItemEditando({ ...item });
     setIsModalOpen(true);
   };
 
   const salvarEdicao = () => {
-    const novaLista = registros.map(r => 
-      r.id === itemEditando.id 
-        ? { 
-            ...itemEditando, 
-            custo: stringParaNumero(itemEditando.custo), 
-            valor: Number(itemEditando.valor),
-            litros: Number(itemEditando.litros)
-          } 
-        : r
-    );
+    const novaLista = registros.map(r => {
+      if (r.id === itemEditando.id) {
+        const novoCusto = Number(itemEditando.litros) * Number(itemEditando.precoLitro);
+        return { 
+          ...itemEditando, 
+          custo: novoCusto, 
+          valor: Number(itemEditando.valor),
+          litros: Number(itemEditando.litros),
+          precoLitro: Number(itemEditando.precoLitro)
+        };
+      }
+      return r;
+    });
     setRegistros(novaLista);
     setIsModalOpen(false);
   };
@@ -58,37 +55,14 @@ function App() {
     return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const aplicarMascaraDinheiro = (valor) => {
-    let v = String(valor).replace(/\D/g, ""); 
-    if (!v) return "0,00";
-    v = (Number(v) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return v;
-  };
-
-  const stringParaNumero = (str) => {
-    if (typeof str === 'number') return str;
-    if (!str) return 0;
-    return Number(str.replace(/\./g, '').replace(',', '.'));
-  };
-
-  const maquinas = registros
-    .filter(r => r.categoria === 'Máquina')
-    .sort((a, b) => Number(b.custo) - Number(a.custo));
-
-  const caminhoes = registros
-    .filter(r => r.categoria === 'Caminhão')
-    .sort((a, b) => Number(b.custo) - Number(a.custo));
-
-  const veiculos = registros
-    .filter(r => r.categoria === 'Veículo')
-    .sort((a, b) => Number(b.custo) - Number(a.custo));
+  const maquinas = registros.filter(r => r.categoria === 'Máquina').sort((a, b) => Number(b.custo) - Number(a.custo));
+  const caminhoes = registros.filter(r => r.categoria === 'Caminhão').sort((a, b) => Number(b.custo) - Number(a.custo));
+  const veiculos = registros.filter(r => r.categoria === 'Veículo').sort((a, b) => Number(b.custo) - Number(a.custo));
   
   const totalGeral = registros.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
   const totalLiters = registros.reduce((acc, curr) => acc + Number(curr.litros || 0), 0);
-  
   const litrosDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.litros || 0), 0);
   const litrosGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.litros || 0), 0);
-  
   const custoDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.custo || 0), 0);
   const custoGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
 
@@ -106,8 +80,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] p-4 md:p-10 font-sans relative">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] p-4 md:p-10 font-sans relative text-left">
+      <div className="max-w-9xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-200 gap-4">
           <div className="flex items-center gap-4 text-left">
             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-inner">
@@ -128,11 +102,15 @@ function App() {
           </button>
         </div>
 
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 text-left">
-          <form onSubmit={adicionar} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+          <form onSubmit={adicionar} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Identificação</label>
               <input required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold" placeholder="Prefixo" value={form.nome} onChange={e => setForm({...form, nome: e.target.value.toUpperCase()})}/>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Motorista</label>
+              <input required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold" placeholder="Nome" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})}/>
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Categoria</label>
@@ -149,17 +127,17 @@ function App() {
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-blue-600">Uso (h/km)</label>
-              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-blue-600" 
-                value={form.valor || ''} onChange={e => setForm({...form, valor: e.target.value})}/>
+              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-blue-600" value={form.valor || ''} onChange={e => setForm({...form, valor: e.target.value})}/>
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-green-600">Abastecimento (Lts)</label>
-              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-green-600" 
-                value={form.litros || ''} onChange={e => setForm({...form, litros: e.target.value})}/>
+              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-green-600" value={form.litros || ''} onChange={e => setForm({...form, litros: e.target.value})}/>
             </div>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-xs tracking-widest">
-              Lançar
-            </button>
+            <div>
+              <label className="text-[10px] font-black text-red-600 uppercase mb-2 block tracking-wider">Preço Litro (R$)</label>
+              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-red-600" placeholder="0,00" value={form.precoLitro || ''} onChange={e => setForm({...form, precoLitro: e.target.value})}/>
+            </div>
+            <button className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
           </form>
         </div>
 
@@ -184,29 +162,26 @@ function App() {
 
           <div className="p-8 md:p-12 grid md:grid-cols-3 gap-8 text-left text-sm font-bold">
             <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-orange-500/20 pb-2 flex items-center gap-2">
-                <span className="text-xl">🚜</span> Máquinas
-              </h3>
+              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-orange-500/20 pb-2 flex items-center gap-2"><span className="text-xl">🚜</span> Máquinas</h3>
               <div className="space-y-6">
                 {maquinas.map(m => {
                   const maiorCusto = Math.max(...maquinas.map(i => Number(i.custo)), 1);
                   const larguraBarra = (Number(m.custo) / maiorCusto) * 100;
-
+                  const consumo = m.valor > 0 ? (m.litros / m.valor).toFixed(2) : 0;
                   return (
-                    <div key={m.id} className="group flex items-center gap-3">
-                      <span className="w-18 font-black text-slate-700 text-[14px]">{m.nome}</span>
-                      <div className="flex-1 bg-slate-100 h-8 rounded-lg relative overflow-hidden">
-                        <div 
-                          className="bg-orange-500 h-full transition-all duration-500" 
-                          style={{ width: `${larguraBarra}%` }}
-                        ></div>
-                        <span className="text-[16px] absolute inset-0 flex items-center justify-end pr-2 text-[12px] font-black text-slate-800 italic">
-                          {m.valor}h | R$ {Number(m.custo).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 text-slate-300">
-                        <button onClick={() => abrirEdicao(m)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                        <button onClick={() => remover(m.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                    <div key={m.id} className="group flex flex-col gap-1">
+                      <span className="font-black text-slate-700 text-[12px] uppercase">{m.nome} <span className="text-slate-400 font-bold ml-1">- {m.motorista}</span></span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
+                          <div className="bg-orange-500 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
+                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
+                            {m.valor}h | {m.litros}L | {consumo}L/h | R$ {Number(m.precoLitro).toFixed(2)} | R$ {Number(m.custo).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 text-slate-300">
+                          <button onClick={() => abrirEdicao(m)} className="hover:text-blue-500"><Edit3 size={14}/></button>
+                          <button onClick={() => remover(m.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -215,29 +190,26 @@ function App() {
             </div>
 
             <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-green-600/20 pb-2 flex items-center gap-2">
-                <span className="text-xl">🚛</span> Caminhões
-              </h3>
+              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-green-600/20 pb-2 flex items-center gap-2"><span className="text-xl">🚛</span> Caminhões</h3>
               <div className="space-y-6">
                 {caminhoes.map(c => {
                   const maiorCusto = Math.max(...caminhoes.map(i => Number(i.custo)), 1);
                   const larguraBarra = (Number(c.custo) / maiorCusto) * 100;
-
+                  const consumo = c.litros > 0 ? (c.valor / c.litros).toFixed(2) : 0;
                   return (
-                    <div key={c.id} className="group flex items-center gap-3">
-                      <span className="w-18 font-black text-slate-700 text-[14px]">{c.nome}</span>
-                      <div className="flex-1 bg-slate-100 h-8 rounded-lg relative overflow-hidden">
-                        <div 
-                          className="bg-green-600 h-full transition-all duration-500" 
-                          style={{ width: `${larguraBarra}%` }}
-                        ></div>
-                        <span className="text-[16px] absolute inset-0 flex items-center justify-end pr-2 text-[12px] font-black text-slate-800 italic">
-                          {c.valor}km | R$ {Number(c.custo).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 text-slate-300">
-                        <button onClick={() => abrirEdicao(c)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                        <button onClick={() => remover(c.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                    <div key={c.id} className="group flex flex-col gap-1">
+                      <span className="font-black text-slate-700 text-[12px] uppercase">{c.nome} <span className="text-slate-400 font-bold ml-1">- {c.motorista}</span></span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
+                          <div className="bg-green-600 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
+                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
+                            {c.valor}km | {c.litros}L | {consumo}km/L | R$ {Number(c.precoLitro).toFixed(2)} | R$ {Number(c.custo).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 text-slate-300">
+                          <button onClick={() => abrirEdicao(c)} className="hover:text-blue-500"><Edit3 size={14}/></button>
+                          <button onClick={() => remover(c.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -246,29 +218,26 @@ function App() {
             </div>
 
             <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-blue-600/20 pb-2 flex items-center gap-2">
-                <span className="text-xl">🚗</span> VEÍCULOS
-              </h3>
+              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-blue-600/20 pb-2 flex items-center gap-2"><span className="text-xl">🚗</span> VEÍCULOS</h3>
               <div className="space-y-6">
                 {veiculos.map(v => {
                   const maiorCusto = Math.max(...veiculos.map(i => Number(i.custo)), 1);
                   const larguraBarra = (Number(v.custo) / maiorCusto) * 100;
-
+                  const consumo = v.litros > 0 ? (v.valor / v.litros).toFixed(2) : 0;
                   return (
-                    <div key={v.id} className="group flex items-center gap-3">
-                      <span className="w-18 font-black text-slate-700 text-[14px]">{v.nome}</span>
-                      <div className="flex-1 bg-slate-100 h-8 rounded-lg relative overflow-hidden">
-                        <div 
-                          className="bg-blue-400 h-full transition-all duration-500" 
-                          style={{ width: `${larguraBarra}%` }}
-                        ></div>
-                        <span className="text-[16px] absolute inset-0 flex items-center justify-end pr-2 text-[12px] font-black text-slate-800 italic">
-                          {v.valor}km | R$ {Number(v.custo).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 text-slate-300">
-                        <button onClick={() => abrirEdicao(v)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                        <button onClick={() => remover(v.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                    <div key={v.id} className="group flex flex-col gap-1">
+                      <span className="font-black text-slate-700 text-[12px] uppercase">{v.nome} <span className="text-slate-400 font-bold ml-1">- {v.motorista}</span></span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
+                          <div className="bg-blue-400 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
+                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
+                            {v.valor}km | {v.litros}L | {consumo}km/L | R$ {Number(v.precoLitro).toFixed(2)} | R$ {Number(v.custo).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 text-slate-300">
+                          <button onClick={() => abrirEdicao(v)} className="hover:text-blue-500"><Edit3 size={14}/></button>
+                          <button onClick={() => remover(v.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -279,24 +248,14 @@ function App() {
             <div className="md:col-span-3 border-t-2 border-slate-100 pt-10 grid md:grid-cols-3 gap-8 items-center text-center md:text-left">
               <div className="space-y-4">
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-[#f97316] shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                    Diesel (Lts)
-                  </span>
-                  <span className="font-black text-xl flex-1 text-right">
-                    {litrosDiesel.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L
-                  </span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Diesel (Lts)</span>
+                  <span className="font-black text-xl flex-1 text-right">{litrosDiesel.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
                 </div>
-
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-blue-500 shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                    Gasolina (Lts)
-                  </span>
-                  <span className="font-black text-xl flex-1 text-right">
-                    {litrosGasolina.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L
-                  </span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Gasolina (Lts)</span>
+                  <span className="font-black text-xl flex-1 text-right">{litrosGasolina.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
                 </div>
               </div>
-
               <div className="flex flex-col items-center gap-2">
                 <div className="w-35 h-35 rounded-full shadow-xl flex items-center justify-center relative border-4 border-white"
                   style={{ background: `conic-gradient(#f97316 0% ${percDiesel}%, #2563eb ${percDiesel}% 100%)` }}>
@@ -304,7 +263,6 @@ function App() {
                 </div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mt-2 italic">DIESEL X GASOLINA</p>
               </div>
-
               <div className="space-y-4">
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-500 shadow-lg border border-slate-100">
                   <span className="text-[10px] font-black text-slate-400 uppercase">Custo Diesel</span>
@@ -332,23 +290,17 @@ function App() {
             </div>
             <div className="p-8 space-y-6">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest flex items-center gap-1">
-                  <DollarSign size={12}/> VALOR TOTAL EM DINHEIRO (R$)
-                </label>
-                <input type="text" className="w-full bg-red-50 border border-red-100 p-4 rounded-2xl outline-none font-black text-2xl text-center text-red-600" 
-                  value={itemEditando.custo} onChange={e => setItemEditando({...itemEditando, custo: aplicarMascaraDinheiro(e.target.value) })} />
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest flex items-center gap-1"><DollarSign size={12}/> Motorista</label>
+                <input className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-black text-slate-700" value={itemEditando.motorista} onChange={e => setItemEditando({...itemEditando, motorista: e.target.value.toUpperCase() })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-blue-600 text-center" 
-                  value={itemEditando.valor} onChange={e => setItemEditando({...itemEditando, valor: e.target.value})}/>
-                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-green-600 text-center" 
-                  value={itemEditando.litros} onChange={e => setItemEditando({...itemEditando, litros: e.target.value})}/>
+              <div className="grid grid-cols-3 gap-4">
+                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-blue-600 text-center" value={itemEditando.valor} onChange={e => setItemEditando({...itemEditando, valor: e.target.value})}/>
+                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-green-600 text-center" value={itemEditando.litros} onChange={e => setItemEditando({...itemEditando, litros: e.target.value})}/>
+                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-red-600 text-center" value={itemEditando.precoLitro} onChange={e => setItemEditando({...itemEditando, precoLitro: e.target.value})}/>
               </div>
               <div className="flex gap-3 pt-4">
                 <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
-                <button onClick={salvarEdicao} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-red-700 transition flex items-center justify-center gap-2 uppercase text-xs tracking-widest">
-                  <Check size={18} /> Salvar
-                </button>
+                <button onClick={salvarEdicao} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-red-700 transition flex items-center justify-center gap-2 uppercase text-xs tracking-widest"><Check size={18} /> Salvar</button>
               </div>
             </div>
           </div>
