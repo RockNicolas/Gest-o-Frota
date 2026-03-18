@@ -1,0 +1,27 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model RegistroFrota {
+  id           String   @id @default(uuid())
+  nome         String   // Ex: "Trator 01", "Caminhão 05"
+  motorista    String   // Nome do motorista
+  categoria    String   // "Máquina", "Caminhão" ou "Veículo"
+  tipo         String   // "Diesel" ou "Gasolina"
+  valor        Float    // Horas (h) ou KM (km)
+  litros       Float    // Quantidade abastecida
+  precoLitro   Float    // Preço por litro
+  custo        Float    // Valor total (litros * precoLitro)
+  observacoes  String?  @db.Text // Texto longo para as notas
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("registros_frota") // Nome da tabela no banco de dados
+}

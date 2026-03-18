@@ -30,7 +30,7 @@ const ListaCategoria = ({ titulo, icone, corBarra, itens, abrirEdicao, remover }
           return (
             <div key={item.id} className="group flex flex-col gap-1">
               <span className="font-black text-slate-700 text-[12px] uppercase">
-                {item.nome} <span className="text-slate-400 font-bold ml-1">- {item.motorista}</span>
+                {item.nome} <span className="text-slate-400 font-bold ml-1 text-[12px]">- {item.motorista}</span>
               </span>
               <div className="flex items-center gap-3">
                 <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">

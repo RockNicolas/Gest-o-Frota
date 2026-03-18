@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { TrendingUp } from 'lucide-react';
-import Header from './components/Header';
 import Formulario from './components/Formulario';
 import ListaCategoria from './components/ListaCategoria';
 import ModalEdit from './components/ModalEdit';
@@ -71,24 +68,12 @@ function App() {
   const custoGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
   const percDiesel = totalLiters ? (litrosDiesel / totalLiters) * 100 : 50;
 
-  const gerarPDF = () => {
-    const input = document.getElementById('print-area');
-    html2canvas(input, { scale: 2 }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const width = pdf.internal.pageSize.getWidth();
-      pdf.addImage(imgData, 'PNG', 0, 0, width, (canvas.height * width) / canvas.width);
-      pdf.save("Relatorio_MonteCristo.pdf");
-    });
-  };
-
   return (
     <Router>
       <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] font-sans text-left">
         <Routes>
           <Route path="/" element={
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
-            { /* <Header gerarPDF={gerarPDF} /> */} 
               <div id="print-area" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
                 <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
                   <div className="flex items-center gap-6"> 
@@ -164,7 +149,7 @@ function App() {
                       formatarMoedaBR={formatarMoedaBR} 
                     />
                 </div>
-              </div>
+              </div>,
             </div>
           } />
 
