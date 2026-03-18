@@ -13,14 +13,9 @@ const Header = ({ gerarPDF }) => {
             <Fuel size={24} className="text-white" />
           </div>
         </div>
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tighter leading-none uppercase">MONTE<span className="text-red-600">CRISTO</span></h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Painel de Controle</p>
-        </div>
+        
       </div>
-      <button onClick={gerarPDF} className="bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl active:scale-95 uppercase text-xs tracking-widest">
-        <Download size={18}/> Gerar Relatório
-      </button>
+      
     </div>
   );
 };

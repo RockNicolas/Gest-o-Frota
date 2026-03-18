@@ -14,7 +14,7 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, aoSelecionar }) => {
 
   return (
     <div className="space-y-8">
-      <h3 className={`font-black text-slate-800 uppercase italic border-b-4 ${corBarra}/20 pb-2 flex items-center gap-2`}>
+      <h3 className={`font-black text-slate-800 uppercase italic border-b-4 ${corBarra} pb-2 flex items-center gap-2`}>
         <span className="text-xl">{icone}</span> {titulo}
       </h3>
       <div className="space-y-6">
@@ -32,7 +32,7 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, aoSelecionar }) => {
               className="group flex flex-col gap-1 cursor-pointer hover:scale-[1.02] transition-all active:scale-95"
               onClick={() => aoSelecionar(item)}
             >
-              <span className="font-black text-slate-700 text-[12px] uppercase">
+              <span className="font-black text-slate-900 text-[18px] uppercase">
                 {item.nome} <span className="text-slate-400 font-bold ml-1">- {item.motorista}</span>
               </span>
               <div className="flex items-center gap-3">

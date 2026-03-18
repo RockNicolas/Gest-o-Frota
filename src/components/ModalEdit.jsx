@@ -28,12 +28,11 @@ const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
             <button onClick={fechar} className="flex-1 py-3 font-bold text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
             <button onClick={salvar} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-red-700 transition flex items-center justify-center gap-2 uppercase text-xs tracking-widest"><Check size={18} /> Salvar</button>
           </div>
-          {/* Dentro do ModalEdit.jsx */}
-<textarea 
-  className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 h-32 resize-none shadow-inner italic"
-  value={item.observacoes || ""}
-  onChange={e => setItem({...item, observacoes: e.target.value})}
-/>
+            <textarea 
+            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 h-32 resize-none shadow-inner italic"
+            value={item.observacoes || ""}
+            onChange={e => setItem({...item, observacoes: e.target.value})}
+            />
         </div>
       </div>
     </div>

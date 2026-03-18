@@ -3,15 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { TrendingUp } from 'lucide-react';
-
-// Imports dos componentes Admin
 import Header from './components/Header';
 import Formulario from './components/Formulario';
 import ListaCategoria from './components/ListaCategoria';
 import ModalEdit from './components/ModalEdit';
 import ResumoFinanceiro from './components/ResumoFinanceiro';
-
-// Imports dos componentes Cliente
 import ListaCliente from './components/cliente/ListaCliente';
 import ModalDetalhes from './components/cliente/ModalDetalhes';
 
@@ -90,10 +86,9 @@ function App() {
     <Router>
       <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] font-sans text-left">
         <Routes>
-          {/* VISÃO DO CLIENTE */}
           <Route path="/" element={
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
-              <Header gerarPDF={gerarPDF} />
+            { /* <Header gerarPDF={gerarPDF} /> */} 
               <div id="print-area" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
                 <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
                   <div className="flex items-center gap-6"> 
@@ -127,7 +122,6 @@ function App() {
             </div>
           } />
 
-          {/* PAINEL ADMINISTRATIVO */}
           <Route path="/admin" element={
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
               <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
@@ -155,14 +149,12 @@ function App() {
                 </div>
 
                 <div className="p-8 md:p-12">
-                    {/* Listas de Edição (Parte Superior) */}
                     <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
                       <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} abrirEdicao={abrirEdicao} remover={remover} />
                       <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} abrirEdicao={abrirEdicao} remover={remover} />
                       <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} abrirEdicao={abrirEdicao} remover={remover} />
                     </div>
 
-                    {/* Resumo Financeiro (Parte Inferior igual ao Cliente) */}
                     <ResumoFinanceiro 
                       litrosDiesel={litrosDiesel} 
                       litrosGasolina={litrosGasolina} 
