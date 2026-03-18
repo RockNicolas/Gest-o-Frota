@@ -66,7 +66,7 @@ const ModalDetalhes = ({ item, fechar }) => {
             <label className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest">
                 <Info size={14} className="text-blue-500"/> Observações do Lançamento
             </label>
-            <div className="w-full bg-slate-50 border border-slate-200 p-5 rounded-3xl min-h-[120px] text-slate-700 font-bold italic leading-relaxed shadow-inner break-words overflow-hidden">
+            <div className="whitespace-pre-wrap w-full bg-slate-50 border border-slate-200 p-5 rounded-3xl min-h-[120px] text-slate-700 font-bold italic leading-relaxed shadow-inner break-words overflow-hidden">
                 {item.observacoes || "Nenhuma observação técnica foi relatada para este abastecimento."}
             </div>
          </div>
