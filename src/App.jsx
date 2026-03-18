@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Fuel, Truck, HardHat, Download, Plus, Trash2, TrendingUp, PieChart as PieIcon, Edit3, X, Check, DollarSign } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { TrendingUp } from 'lucide-react';
+
+// Imports dos componentes Admin
+import Header from './components/Header';
+import Formulario from './components/Formulario';
+import ListaCategoria from './components/ListaCategoria';
+import ModalEdit from './components/ModalEdit';
+import ResumoFinanceiro from './components/ResumoFinanceiro';
+
+// Imports dos componentes Cliente
+import ListaCliente from './components/cliente/ListaCliente';
+import ModalDetalhes from './components/cliente/ModalDetalhes';
 
 function App() {
   const [registros, setRegistros] = useState(() => {
@@ -9,9 +21,20 @@ function App() {
     return salvo ? JSON.parse(salvo) : [];
   });
 
-  const [form, setForm] = useState({ nome: '', motorista: '', tipo: 'Diesel', categoria: 'Máquina', valor: 0, litros: 0, precoLitro: 0 });
+  const [itemSelecionado, setItemSelecionado] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
+
+  const [form, setForm] = useState({ 
+    nome: '', 
+    motorista: '', 
+    tipo: 'Diesel', 
+    categoria: 'Máquina', 
+    valor: 0, 
+    litros: 0, 
+    precoLitro: 0,
+    observacoes: '' 
+  });
 
   useEffect(() => {
     localStorage.setItem('registros_montecristo', JSON.stringify(registros));
@@ -21,51 +44,35 @@ function App() {
     e.preventDefault();
     const custo = Number(form.litros) * Number(form.precoLitro);
     setRegistros([...registros, { ...form, id: Date.now(), custo }]);
-    setForm({ ...form, nome: '', motorista: '', valor: 0, litros: 0, precoLitro: 0 });
+    setForm({ ...form, nome: '', motorista: '', valor: 0, litros: 0, precoLitro: 0, observacoes: '' });
   };
 
   const remover = (id) => setRegistros(registros.filter(r => r.id !== id));
+  const formatarMoedaBR = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const abrirEdicao = (item) => {
-    setItemEditando({ ...item });
+    setItemEditando({ ...item, observacoes: item.observacoes || "" });
     setIsModalOpen(true);
   };
 
   const salvarEdicao = () => {
-    const novaLista = registros.map(r => {
-      if (r.id === itemEditando.id) {
-        const novoCusto = Number(itemEditando.litros) * Number(itemEditando.precoLitro);
-        return { 
-          ...itemEditando, 
-          custo: novoCusto, 
-          valor: Number(itemEditando.valor),
-          litros: Number(itemEditando.litros),
-          precoLitro: Number(itemEditando.precoLitro)
-        };
-      }
-      return r;
-    });
-    setRegistros(novaLista);
+    setRegistros(registros.map(r => r.id === itemEditando.id ? { 
+      ...itemEditando, 
+      custo: Number(itemEditando.litros) * Number(itemEditando.precoLitro),
+      valor: Number(itemEditando.valor), 
+      litros: Number(itemEditando.litros), 
+      precoLitro: Number(itemEditando.precoLitro),
+      observacoes: itemEditando.observacoes 
+    } : r));
     setIsModalOpen(false);
   };
 
-  const formatarMoedaBR = (valor) => {
-    const n = Number(valor);
-    if (isNaN(n)) return "0,00";
-    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const maquinas = registros.filter(r => r.categoria === 'Máquina').sort((a, b) => Number(b.custo) - Number(a.custo));
-  const caminhoes = registros.filter(r => r.categoria === 'Caminhão').sort((a, b) => Number(b.custo) - Number(a.custo));
-  const veiculos = registros.filter(r => r.categoria === 'Veículo').sort((a, b) => Number(b.custo) - Number(a.custo));
-  
   const totalGeral = registros.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
   const totalLiters = registros.reduce((acc, curr) => acc + Number(curr.litros || 0), 0);
   const litrosDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.litros || 0), 0);
   const litrosGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.litros || 0), 0);
   const custoDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.custo || 0), 0);
   const custoGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
-
   const percDiesel = totalLiters ? (litrosDiesel / totalLiters) * 100 : 50;
 
   const gerarPDF = () => {
@@ -80,233 +87,102 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] p-4 md:p-10 font-sans relative text-left">
-      <div className="max-w-9xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-200 gap-4">
-          <div className="flex items-center gap-4 text-left">
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-inner">
-              <div className="p-2 bg-white">
-                <img src="./company_2.png" alt="Logo" className="w-10 h-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
-              </div>
-              <div className="bg-red-600 p-3 self-stretch flex items-center">
-                <Fuel size={24} className="text-white" />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tighter leading-none uppercase">MONTE<span className="text-red-600">CRISTO</span></h1>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Painel de Controle</p>
-            </div>
-          </div>
-          <button onClick={gerarPDF} className="bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl active:scale-95 uppercase text-xs tracking-widest">
-            <Download size={18}/> Gerar Relatório
-          </button>
-        </div>
-
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-          <form onSubmit={adicionar} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Identificação</label>
-              <input required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold" placeholder="Prefixo" value={form.nome} onChange={e => setForm({...form, nome: e.target.value.toUpperCase()})}/>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Motorista</label>
-              <input required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold" placeholder="Nome" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})}/>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Categoria</label>
-              <select className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold outline-none cursor-pointer" value={form.categoria} 
-                onChange={e => {
-                  const cat = e.target.value;
-                  const tipoAuto = (cat === 'Máquina' || cat === 'Caminhão') ? 'Diesel' : 'Gasolina';
-                  setForm({...form, categoria: cat, tipo: tipoAuto});
-                }}>
-                <option value="Máquina">🚜 Máquina (Diesel)</option>
-                <option value="Caminhão">🚛 Caminhão (Diesel)</option>
-                <option value="Veículo">🚗 Veículo (Gasolina)</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-blue-600">Uso (h/km)</label>
-              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-blue-600" value={form.valor || ''} onChange={e => setForm({...form, valor: e.target.value})}/>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-green-600">Abastecimento (Lts)</label>
-              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-green-600" value={form.litros || ''} onChange={e => setForm({...form, litros: e.target.value})}/>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-red-600 uppercase mb-2 block tracking-wider">Preço Litro (R$)</label>
-              <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-red-600" placeholder="0,00" value={form.precoLitro || ''} onChange={e => setForm({...form, precoLitro: e.target.value})}/>
-            </div>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
-          </form>
-        </div>
-
-        <div id="print-area" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
-          <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center text-left">
-            <div className="flex items-center gap-6"> 
-              <div className="relative bg-white/5 p-2 rounded-full border border-white/10">
-                <img src="./company_2.png" alt="Logo" className="w-16 h-16 object-contain" onError={(e) => e.target.style.display = 'none'} />
-              </div>
-              <div>
-                <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none">Relatório Semanal</h2>
-                <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
-                  <TrendingUp size={14}/> Monte Cristo Frotas
-                </div>
-              </div>
-            </div>
-            <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Acumulado</p>
-              <p className="text-3xl font-black text-red-500">R$ {formatarMoedaBR(totalGeral)}</p>
-            </div>
-          </div>
-
-          <div className="p-8 md:p-12 grid md:grid-cols-3 gap-8 text-left text-sm font-bold">
-            <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-orange-500/20 pb-2 flex items-center gap-2"><span className="text-xl">🚜</span> Máquinas</h3>
-              <div className="space-y-6">
-                {maquinas.map(m => {
-                  const maiorCusto = Math.max(...maquinas.map(i => Number(i.custo)), 1);
-                  const larguraBarra = (Number(m.custo) / maiorCusto) * 100;
-                  const consumo = m.valor > 0 ? (m.litros / m.valor).toFixed(2) : 0;
-                  return (
-                    <div key={m.id} className="group flex flex-col gap-1">
-                      <span className="font-black text-slate-700 text-[12px] uppercase">{m.nome} <span className="text-slate-400 font-bold ml-1">- {m.motorista}</span></span>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
-                          <div className="bg-orange-500 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
-                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
-                            {m.valor}h | {m.litros}L | {consumo}L/h | R$ {Number(m.precoLitro).toFixed(2)} | R$ {Number(m.custo).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 text-slate-300">
-                          <button onClick={() => abrirEdicao(m)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                          <button onClick={() => remover(m.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
-                        </div>
+    <Router>
+      <div className="min-h-screen bg-[#F1F5F9] text-[#1E293B] font-sans text-left">
+        <Routes>
+          {/* VISÃO DO CLIENTE */}
+          <Route path="/" element={
+            <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
+              <Header gerarPDF={gerarPDF} />
+              <div id="print-area" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
+                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
+                  <div className="flex items-center gap-6"> 
+                    <img src="./company_2.png" alt="Logo" className="w-16 h-16 object-contain" />
+                    <div>
+                      <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">Relatório Monte Cristo</h2>
+                      <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
+                        <TrendingUp size={14}/> Controle de Frota Ativo
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                  <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo Semanal</p>
+                    <p className="text-3xl font-black text-red-500">R$ {formatarMoedaBR(totalGeral)}</p>
+                  </div>
+                </div>
+
+                <div className="p-8 md:p-12">
+                  <div className="grid md:grid-cols-3 gap-8 mb-12">
+                    <ListaCliente titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} aoSelecionar={setItemSelecionado} />
+                    <ListaCliente titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} aoSelecionar={setItemSelecionado} />
+                    <ListaCliente titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} aoSelecionar={setItemSelecionado} />
+                  </div>
+                  
+                  <ResumoFinanceiro 
+                    litrosDiesel={litrosDiesel} litrosGasolina={litrosGasolina} percDiesel={percDiesel} 
+                    custoDiesel={custoDiesel} custoGasolina={custoGasolina} formatarMoedaBR={formatarMoedaBR} 
+                  />
+                </div>
               </div>
             </div>
+          } />
 
-            <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-green-600/20 pb-2 flex items-center gap-2"><span className="text-xl">🚛</span> Caminhões</h3>
-              <div className="space-y-6">
-                {caminhoes.map(c => {
-                  const maiorCusto = Math.max(...caminhoes.map(i => Number(i.custo)), 1);
-                  const larguraBarra = (Number(c.custo) / maiorCusto) * 100;
-                  const consumo = c.litros > 0 ? (c.valor / c.litros).toFixed(2) : 0;
-                  return (
-                    <div key={c.id} className="group flex flex-col gap-1">
-                      <span className="font-black text-slate-700 text-[12px] uppercase">{c.nome} <span className="text-slate-400 font-bold ml-1">- {c.motorista}</span></span>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
-                          <div className="bg-green-600 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
-                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
-                            {c.valor}km | {c.litros}L | {consumo}km/L | R$ {Number(c.precoLitro).toFixed(2)} | R$ {Number(c.custo).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 text-slate-300">
-                          <button onClick={() => abrirEdicao(c)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                          <button onClick={() => remover(c.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
-                        </div>
+          {/* PAINEL ADMINISTRATIVO */}
+          <Route path="/admin" element={
+            <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
+              <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
+                <h1 className="font-black uppercase tracking-widest text-sm">Painel Administrativo - Monte Cristo</h1>
+                <a href="/" className="bg-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</a>
+              </div>
+
+              <Formulario form={form} setForm={setForm} adicionar={adicionar} />
+
+              <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
+                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
+                  <div className="flex items-center gap-6"> 
+                    <img src="./company_2.png" alt="Logo" className="w-16 h-16 object-contain" />
+                    <div>
+                      <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">Gestão de Frota Ativa</h2>
+                      <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
+                        <TrendingUp size={14}/> Dashboard Administrativo
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  </div>
+                  <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo Total Acumulado</p>
+                    <p className="text-3xl font-black text-red-500 font-mono">R$ {formatarMoedaBR(totalGeral)}</p>
+                  </div>
+                </div>
 
-            <div className="space-y-8">
-              <h3 className="font-black text-slate-800 uppercase italic border-b-4 border-blue-600/20 pb-2 flex items-center gap-2"><span className="text-xl">🚗</span> VEÍCULOS</h3>
-              <div className="space-y-6">
-                {veiculos.map(v => {
-                  const maiorCusto = Math.max(...veiculos.map(i => Number(i.custo)), 1);
-                  const larguraBarra = (Number(v.custo) / maiorCusto) * 100;
-                  const consumo = v.litros > 0 ? (v.valor / v.litros).toFixed(2) : 0;
-                  return (
-                    <div key={v.id} className="group flex flex-col gap-1">
-                      <span className="font-black text-slate-700 text-[12px] uppercase">{v.nome} <span className="text-slate-400 font-bold ml-1">- {v.motorista}</span></span>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden">
-                          <div className="bg-blue-400 h-full transition-all duration-500" style={{ width: `${larguraBarra}%` }}></div>
-                          <span className="text-[13px] absolute inset-0 flex items-center justify-end pr-2 font-black text-slate-800 italic">
-                            {v.valor}km | {v.litros}L | {consumo}km/L | R$ {Number(v.precoLitro).toFixed(2)} | R$ {Number(v.custo).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 text-slate-300">
-                          <button onClick={() => abrirEdicao(v)} className="hover:text-blue-500"><Edit3 size={14}/></button>
-                          <button onClick={() => remover(v.id)} className="hover:text-red-500"><Trash2 size={14}/></button>
-                        </div>
-                      </div>
+                <div className="p-8 md:p-12">
+                    {/* Listas de Edição (Parte Superior) */}
+                    <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
+                      <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} abrirEdicao={abrirEdicao} remover={remover} />
+                      <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} abrirEdicao={abrirEdicao} remover={remover} />
+                      <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} abrirEdicao={abrirEdicao} remover={remover} />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div className="md:col-span-3 border-t-2 border-slate-100 pt-10 grid md:grid-cols-3 gap-8 items-center text-center md:text-left">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-[#f97316] shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Diesel (Lts)</span>
-                  <span className="font-black text-xl flex-1 text-right">{litrosDiesel.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
-                </div>
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-blue-500 shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Gasolina (Lts)</span>
-                  <span className="font-black text-xl flex-1 text-right">{litrosGasolina.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-35 h-35 rounded-full shadow-xl flex items-center justify-center relative border-4 border-white"
-                  style={{ background: `conic-gradient(#f97316 0% ${percDiesel}%, #2563eb ${percDiesel}% 100%)` }}>
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-inner text-[10px] font-black">LTS</div>
-                </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase mt-2 italic">DIESEL X GASOLINA</p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-500 shadow-lg border border-slate-100">
-                  <span className="text-[10px] font-black text-slate-400 uppercase">Custo Diesel</span>
-                  <span className="font-black text-xl text-red-600">R$ {formatarMoedaBR(custoDiesel)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-600 shadow-lg border border-slate-100">
-                  <span className="text-[10px] font-black text-slate-400 uppercase">Custo Gasolina</span>
-                  <span className="font-black text-xl text-red-600">R$ {formatarMoedaBR(custoGasolina)}</span>
+                    {/* Resumo Financeiro (Parte Inferior igual ao Cliente) */}
+                    <ResumoFinanceiro 
+                      litrosDiesel={litrosDiesel} 
+                      litrosGasolina={litrosGasolina} 
+                      percDiesel={percDiesel} 
+                      custoDiesel={custoDiesel} 
+                      custoGasolina={custoGasolina} 
+                      formatarMoedaBR={formatarMoedaBR} 
+                    />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          } />
+
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+
+        <ModalEdit isOpen={isModalOpen} item={itemEditando} setItem={setItemEditando} salvar={salvarEdicao} fechar={() => setIsModalOpen(false)} />
+        <ModalDetalhes item={itemSelecionado} fechar={() => setItemSelecionado(null)} />
       </div>
-
-      {isModalOpen && itemEditando && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 text-left">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-black uppercase italic tracking-tighter">Editar Registro</h3>
-                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{itemEditando.nome}</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)}><X size={20} /></button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest flex items-center gap-1"><DollarSign size={12}/> Motorista</label>
-                <input className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-black text-slate-700" value={itemEditando.motorista} onChange={e => setItemEditando({...itemEditando, motorista: e.target.value.toUpperCase() })} />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-blue-600 text-center" value={itemEditando.valor} onChange={e => setItemEditando({...itemEditando, valor: e.target.value})}/>
-                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-green-600 text-center" value={itemEditando.litros} onChange={e => setItemEditando({...itemEditando, litros: e.target.value})}/>
-                <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-red-600 text-center" value={itemEditando.precoLitro} onChange={e => setItemEditando({...itemEditando, precoLitro: e.target.value})}/>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 font-bold text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
-                <button onClick={salvarEdicao} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black shadow-lg hover:bg-red-700 transition flex items-center justify-center gap-2 uppercase text-xs tracking-widest"><Check size={18} /> Salvar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </Router>
   );
 }
 
