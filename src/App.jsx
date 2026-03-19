@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
 import Formulario from './components/Formulario';
 import ListaCategoria from './components/ListaCategoria';
@@ -9,6 +9,26 @@ import ListaCliente from './components/cliente/ListaCliente';
 import ModalDetalhes from './components/cliente/ModalDetalhes';
 
 function App() {
+  const API_URL_PRIMARY = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://127.0.0.1:3001');
+  const API_URL_FALLBACK = import.meta.env.PROD ? '' : 'http://127.0.0.1:3001';
+  const ADMIN_AUTH_TOKEN_KEY = 'admin_auth_token';
+
+  const apiFetch = async (endpoint, options = {}) => {
+    const token = localStorage.getItem(ADMIN_AUTH_TOKEN_KEY);
+    const headers = {
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const requestOptions = { ...options, headers };
+
+    try {
+      return await fetch(`${API_URL_PRIMARY}${endpoint}`, requestOptions);
+    } catch {
+      if (!API_URL_FALLBACK) throw new Error('Falha de conexão com a API');
+      // Em algumas máquinas/browser, `localhost` pode resolver para IPv6 e falhar.
+      return await fetch(`${API_URL_FALLBACK}${endpoint}`, requestOptions);
+    }
+  };
   const [registros, setRegistros] = useState(() => {
     const salvo = localStorage.getItem('registros_montecristo');
     return salvo ? JSON.parse(salvo) : [];
@@ -17,6 +37,18 @@ function App() {
   const [itemSelecionado, setItemSelecionado] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem(ADMIN_AUTH_TOKEN_KEY));
+  const [login, setLogin] = useState({ user: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [adminUsername, setAdminUsername] = useState(() => localStorage.getItem('admin_username') || '');
+  const [credentialsForm, setCredentialsForm] = useState({
+    usuarioAtual: '',
+    novoUsuario: '',
+    senhaAtual: '',
+    novaSenha: '',
+    confirmarNovaSenha: '',
+  });
+  const [credentialsFeedback, setCredentialsFeedback] = useState({ erro: '', sucesso: '' });
 
   const [form, setForm] = useState({ 
     nome: '', 
@@ -30,17 +62,59 @@ function App() {
   });
 
   useEffect(() => {
+    // Tenta carregar do banco; se falhar, mantém o fallback do localStorage.
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/registros');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        setRegistros(data);
+      } catch (e) {
+        console.error('Falha ao buscar registros do banco:', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('registros_montecristo', JSON.stringify(registros));
   }, [registros]);
 
-  const adicionar = (e) => {
+  const adicionar = async (e) => {
     e.preventDefault();
-    const custo = Number(form.litros) * Number(form.precoLitro);
-    setRegistros([...registros, { ...form, id: Date.now(), custo }]);
-    setForm({ ...form, nome: '', motorista: '', valor: 0, litros: 0, precoLitro: 0, observacoes: '' });
+    try {
+      const resp = await apiFetch('/api/registros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          valor: Number(form.valor),
+          litros: Number(form.litros),
+          precoLitro: Number(form.precoLitro),
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const novoRegistro = await resp.json();
+      setRegistros(prev => [...prev, novoRegistro]);
+      setForm({ ...form, nome: '', motorista: '', valor: 0, litros: 0, precoLitro: 0, observacoes: '' });
+    } catch (e) {
+      console.error('Erro ao salvar no banco:', e);
+    }
   };
 
-  const remover = (id) => setRegistros(registros.filter(r => r.id !== id));
+  const remover = async (id) => {
+    try {
+      const resp = await apiFetch('/api/registros', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idParaDeletar: id }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      setRegistros(prev => prev.filter(r => r.id !== id));
+    } catch (e) {
+      console.error('Erro ao excluir no banco:', e);
+    }
+  };
   const formatarMoedaBR = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const abrirEdicao = (item) => {
@@ -48,16 +122,98 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const salvarEdicao = () => {
-    setRegistros(registros.map(r => r.id === itemEditando.id ? { 
-      ...itemEditando, 
-      custo: Number(itemEditando.litros) * Number(itemEditando.precoLitro),
-      valor: Number(itemEditando.valor), 
-      litros: Number(itemEditando.litros), 
-      precoLitro: Number(itemEditando.precoLitro),
-      observacoes: itemEditando.observacoes 
-    } : r));
+  const salvarEdicao = async () => {
+    if (!itemEditando) return;
+    try {
+      const resp = await apiFetch('/api/registros', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...itemEditando,
+          valor: Number(itemEditando.valor),
+          litros: Number(itemEditando.litros),
+          precoLitro: Number(itemEditando.precoLitro),
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const registroAtualizado = await resp.json();
+      setRegistros(prev => prev.map(r => (r.id === registroAtualizado.id ? registroAtualizado : r)));
+      setIsModalOpen(false);
+    } catch (e) {
+      console.error('Erro ao editar no banco:', e);
+    }
+  };
+
+  const autenticar = async (e) => {
+    e.preventDefault();
+    try {
+      const resp = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: login.user,
+          password: login.password,
+        }),
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      localStorage.setItem(ADMIN_AUTH_TOKEN_KEY, data.token);
+      localStorage.setItem('admin_username', data.username);
+      setAdminUsername(data.username);
+      setIsAuthenticated(true);
+      setLoginError('');
+      return;
+    } catch (err) {
+      setLoginError(err.message || 'Falha ao autenticar.');
+    }
+  };
+
+  const sairPainel = () => {
+    localStorage.removeItem(ADMIN_AUTH_TOKEN_KEY);
+    setIsAuthenticated(false);
     setIsModalOpen(false);
+    setItemEditando(null);
+  };
+
+  const alterarCredenciais = async (e) => {
+    e.preventDefault();
+    try {
+      const resp = await apiFetch('/api/auth/credentials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentUser: credentialsForm.usuarioAtual,
+          currentPassword: credentialsForm.senhaAtual,
+          newUser: credentialsForm.novoUsuario,
+          newPassword: credentialsForm.novaSenha,
+          confirmNewPassword: credentialsForm.confirmarNovaSenha,
+        }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+
+      localStorage.setItem(ADMIN_AUTH_TOKEN_KEY, data.token);
+      localStorage.setItem('admin_username', data.username);
+      setAdminUsername(data.username);
+      setCredentialsForm({
+        usuarioAtual: '',
+        novoUsuario: '',
+        senhaAtual: '',
+        novaSenha: '',
+        confirmarNovaSenha: '',
+      });
+      setCredentialsFeedback({ erro: '', sucesso: data.message || 'Credenciais atualizadas com sucesso.' });
+    } catch (err) {
+      setCredentialsFeedback({ erro: err.message || 'Falha ao atualizar credenciais.', sucesso: '' });
+    }
   };
 
   const totalGeral = registros.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
@@ -108,13 +264,71 @@ function App() {
           } />
 
           <Route path="/admin" element={
+            isAuthenticated ? (
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
               <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
                 <h1 className="font-black uppercase tracking-widest text-sm">Painel Administrativo - Monte Cristo</h1>
-                <a href="/" className="bg-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</a>
+                <button onClick={sairPainel} className="bg-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</button>
               </div>
 
               <Formulario form={form} setForm={setForm} adicionar={adicionar} />
+
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Segurança do Painel</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Atualize aqui o usuário e a senha de acesso do painel administrativo.
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Usuário atual ativo: <span className="font-bold text-slate-700">{adminUsername || 'admin'}</span>
+                </p>
+                <form onSubmit={alterarCredenciais} className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-4">
+                  <input
+                    type="text"
+                    placeholder="Usuário atual"
+                    value={credentialsForm.usuarioAtual}
+                    onChange={(e) => setCredentialsForm({ ...credentialsForm, usuarioAtual: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Novo usuário"
+                    value={credentialsForm.novoUsuario}
+                    onChange={(e) => setCredentialsForm({ ...credentialsForm, novoUsuario: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Senha atual"
+                    value={credentialsForm.senhaAtual}
+                    onChange={(e) => setCredentialsForm({ ...credentialsForm, senhaAtual: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Nova senha"
+                    value={credentialsForm.novaSenha}
+                    onChange={(e) => setCredentialsForm({ ...credentialsForm, novaSenha: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Confirmar nova senha"
+                    value={credentialsForm.confirmarNovaSenha}
+                    onChange={(e) => setCredentialsForm({ ...credentialsForm, confirmarNovaSenha: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    required
+                  />
+                  <button type="submit" className="md:col-span-5 bg-slate-900 hover:bg-slate-800 text-white font-black py-3 px-4 rounded-xl transition-all uppercase text-[10px] tracking-widest">
+                    Alterar Usuário e Senha
+                  </button>
+                </form>
+                {credentialsFeedback.erro ? <p className="text-sm text-red-600 font-semibold mt-3">{credentialsFeedback.erro}</p> : null}
+                {credentialsFeedback.sucesso ? <p className="text-sm text-green-700 font-semibold mt-3">{credentialsFeedback.sucesso}</p> : null}
+              </div>
 
               <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
                 <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
@@ -151,6 +365,58 @@ function App() {
                 </div>
               </div>,
             </div>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
+
+          <Route path="/login" element={
+            isAuthenticated ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-8">
+                  <h1 className="text-2xl font-black uppercase italic tracking-tight text-slate-800">Acesso Admin</h1>
+                  <p className="text-sm text-slate-500 mt-2">Entre com usuário e senha para acessar o painel administrativo.</p>
+
+                  <form onSubmit={autenticar} className="mt-6 space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Usuário</label>
+                      <input
+                        value={login.user}
+                        onChange={(e) => setLogin({ ...login, user: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="username"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Senha</label>
+                      <input
+                        type="password"
+                        value={login.password}
+                        onChange={(e) => setLogin({ ...login, password: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="current-password"
+                        required
+                      />
+                    </div>
+
+                    {loginError ? <p className="text-sm text-red-600 font-semibold">{loginError}</p> : null}
+
+                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl shadow-lg transition-all uppercase text-xs tracking-widest">
+                      Entrar
+                    </button>
+                  </form>
+
+                  <div className="mt-5 text-center">
+                    <Link to="/" className="text-sm text-slate-600 hover:text-slate-800 font-semibold">
+                      Voltar para a página inicial
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )
           } />
 
           <Route path="*" element={<Navigate to="/" />} />

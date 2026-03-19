@@ -1,79 +1,103 @@
-import { PrismaClient } from '@prisma/client';
-
-// Evita criar múltiplas conexões em desenvolvimento
-const prisma = global.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
+import prisma from './_lib/prisma.js';
+import { getAuthPayload } from './_lib/auth.js';
 
 export default async function handler(req, res) {
-  const { id } = req.query; // Pega o ID da URL para Delete/Put
+  const auth = getAuthPayload(req);
 
   // 1. BUSCAR TODOS OS REGISTROS (GET)
   if (req.method === 'GET') {
     try {
-      const registros = await prisma.registro.findMany({
-        orderBy: { dataCriacao: 'desc' },
+      const registros = await prisma.registroFrota.findMany({
+        orderBy: { createdAt: 'desc' },
       });
       return res.status(200).json(registros);
     } catch (error) {
-      return res.status(500).json({ error: "Erro ao buscar dados" });
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao buscar dados' });
     }
   }
 
   // 2. SALVAR NOVO REGISTRO (POST)
   if (req.method === 'POST') {
+    if (!auth) return res.status(401).json({ error: 'Não autenticado.' });
     try {
-      const { nome, motorista, categoria, tipo, valor, litros, precoLitro, observacoes } = req.body;
-      const novoRegistro = await prisma.registro.create({
+      const {
+        nome,
+        motorista,
+        categoria,
+        tipo,
+        valor,
+        litros,
+        precoLitro,
+        observacoes,
+      } = req.body;
+
+      const litrosNum = parseFloat(litros);
+      const precoNum = parseFloat(precoLitro);
+
+      const novoRegistro = await prisma.registroFrota.create({
         data: {
-          prefixo: nome,
-          motorista: motorista,
-          categoria: categoria,
-          tipoComb: tipo,
-          usoValor: parseFloat(valor),
-          litros: parseFloat(litros),
-          precoLitro: parseFloat(precoLitro),
-          custoTotal: parseFloat(litros) * parseFloat(precoLitro),
-          observacoes: observacoes,
+          nome,
+          motorista,
+          categoria,
+          tipo,
+          valor: parseFloat(valor),
+          litros: litrosNum,
+          precoLitro: precoNum,
+          custo: litrosNum * precoNum,
+          observacoes: observacoes ?? null,
         },
       });
       return res.status(201).json(novoRegistro);
     } catch (error) {
-      return res.status(500).json({ error: "Erro ao salvar no banco" });
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao salvar no banco' });
     }
   }
 
   // 3. EDITAR REGISTRO EXISTENTE (PUT)
   if (req.method === 'PUT') {
+    if (!auth) return res.status(401).json({ error: 'Não autenticado.' });
     try {
       const data = req.body;
-      const registroEditado = await prisma.registro.update({
+      const litrosNum = parseFloat(data.litros);
+      const precoNum = parseFloat(data.precoLitro);
+
+      const registroEditado = await prisma.registroFrota.update({
         where: { id: data.id },
         data: {
-          prefixo: data.nome || data.prefixo,
+          nome: data.nome,
           motorista: data.motorista,
-          usoValor: parseFloat(data.valor || data.usoValor),
-          litros: parseFloat(data.litros),
-          precoLitro: parseFloat(data.precoLitro),
-          custoTotal: parseFloat(data.litros) * parseFloat(data.precoLitro),
-          observacoes: data.observacoes,
+          categoria: data.categoria,
+          tipo: data.tipo,
+          valor: parseFloat(data.valor),
+          litros: litrosNum,
+          precoLitro: precoNum,
+          custo: litrosNum * precoNum,
+          observacoes: data.observacoes ?? null,
         },
       });
       return res.status(200).json(registroEditado);
     } catch (error) {
-      return res.status(500).json({ error: "Erro ao editar registro" });
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao editar registro' });
     }
   }
 
   // 4. EXCLUIR REGISTRO (DELETE)
   if (req.method === 'DELETE') {
+    if (!auth) return res.status(401).json({ error: 'Não autenticado.' });
     try {
-      const { idParaDeletar } = req.body; // Recebe o ID pelo corpo da requisição
-      await prisma.registro.delete({
+      const { idParaDeletar } = req.body;
+      await prisma.registroFrota.delete({
         where: { id: idParaDeletar },
       });
-      return res.status(200).json({ message: "Registro excluído com sucesso" });
+      return res.status(200).json({ message: 'Registro excluído com sucesso' });
     } catch (error) {
-      return res.status(500).json({ error: "Erro ao excluir registro" });
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao excluir registro' });
     }
   }
+
+  return res.status(405).json({ error: 'Método não permitido' });
 }

@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model RegistroFrota {
@@ -24,4 +23,14 @@ model RegistroFrota {
   updatedAt    DateTime @updatedAt
 
   @@map("registros_frota") // Nome da tabela no banco de dados
+}
+
+model AdminCredential {
+  key          String   @id @default("singleton")
+  username     String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("admin_credentials")
 }
