@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff } from 'lucide-react';
 import Formulario from './components/Formulario';
 import ListaCategoria from './components/ListaCategoria';
 import ModalEdit from './components/ModalEdit';
@@ -40,6 +40,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem(ADMIN_AUTH_TOKEN_KEY));
   const [login, setLogin] = useState({ user: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [adminUsername, setAdminUsername] = useState(() => localStorage.getItem('admin_username') || '');
   const [credentialsForm, setCredentialsForm] = useState({
     usuarioAtual: '',
@@ -390,16 +391,24 @@ function App() {
                         required
                       />
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Senha</label>
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         value={login.password}
                         onChange={(e) => setLogin({ ...login, password: e.target.value })}
                         className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
                         autoComplete="current-password"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute top-[2.4rem] right-3 text-slate-500 hover:text-slate-700"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                     </div>
 
                     {loginError ? <p className="text-sm text-red-600 font-semibold">{loginError}</p> : null}
