@@ -14,8 +14,11 @@ const ModalDetalhes = ({ item, fechar }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200 text-left">
-        <div className="bg-slate-900 p-8 text-white relative">
+      {/* ADICIONADO: max-h-[90vh] e flex flex-col */}
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200 text-left">
+        
+        {/* Cabeçalho Fixo */}
+        <div className="bg-slate-900 p-8 text-white relative shrink-0">
           <button onClick={fechar} className="absolute top-6 right-6 bg-white/10 p-2 rounded-full hover:bg-red-500 transition-colors">
             <X size={20} />
           </button>
@@ -32,7 +35,8 @@ const ModalDetalhes = ({ item, fechar }) => {
           </div>
         </div>
 
-        <div className="p-8 space-y-6">
+        {/* ADICIONADO: overflow-y-auto para scroll interno */}
+        <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Uso Registrado</p>
@@ -54,7 +58,7 @@ const ModalDetalhes = ({ item, fechar }) => {
           <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex justify-between items-center">
             <div>
               <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Custo Total</p>
-              <p className="text-4xl font-black text-red-600">R$ {Number(item.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              <p className="text-3xl font-black text-red-600">R$ {Number(item.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black text-slate-400 uppercase">Preço/L</p>
@@ -66,10 +70,11 @@ const ModalDetalhes = ({ item, fechar }) => {
             <label className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest">
                 <Info size={14} className="text-blue-500"/> Observações do Lançamento
             </label>
-            <div className="whitespace-pre-wrap w-full bg-slate-50 border border-slate-200 p-5 rounded-3xl min-h-[120px] text-slate-700 font-bold italic leading-relaxed shadow-inner break-words overflow-hidden">
-                {item.observacoes || "Nenhuma observação técnica foi relatada para este abastecimento."}
+            {/* Removido o min-h fixo para evitar que ocupe espaço desnecessário */}
+            <div className="whitespace-pre-wrap w-full bg-slate-50 border border-slate-200 p-5 rounded-3xl text-slate-700 font-bold italic leading-relaxed shadow-inner break-words">
+                {item.observacoes || "Nenhuma observação técnica foi relatada."}
             </div>
-         </div>
+          </div>
 
           <button onClick={fechar} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-lg active:scale-95">
             Fechar Detalhes

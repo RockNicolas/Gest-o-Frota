@@ -42,6 +42,7 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [adminUsername, setAdminUsername] = useState(() => localStorage.getItem('admin_username') || '');
+  const [modoBarra, setModoBarra] = useState('valor'); // 'valor' ou 'custo'
   const [credentialsForm, setCredentialsForm] = useState({
     usuarioAtual: '',
     novoUsuario: '',
@@ -249,10 +250,25 @@ function App() {
                 </div>
 
                 <div className="p-8 md:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
+                    <button
+                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'valor' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                      onClick={() => setModoBarra('valor')}
+                    >
+                      Horas/Km
+                    </button>
+                    <button
+                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'custo' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                      onClick={() => setModoBarra('custo')}
+                    >
+                      Valor (R$)
+                    </button>
+                  </div>
                   <div className="grid md:grid-cols-3 gap-8 mb-12">
-                    <ListaCliente titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} aoSelecionar={setItemSelecionado} />
-                    <ListaCliente titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} aoSelecionar={setItemSelecionado} />
-                    <ListaCliente titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} aoSelecionar={setItemSelecionado} />
+                    <ListaCliente titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
+                    <ListaCliente titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
+                    <ListaCliente titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
                   </div>
                   
                   <ResumoFinanceiro 
@@ -349,10 +365,25 @@ function App() {
                 </div>
 
                 <div className="p-8 md:p-12">
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
+                      <button
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'valor' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                        onClick={() => setModoBarra('valor')}
+                      >
+                        Horas/Km
+                      </button>
+                      <button
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'custo' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                        onClick={() => setModoBarra('custo')}
+                      >
+                        Valor (R$)
+                      </button>
+                    </div>
                     <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
-                      <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} abrirEdicao={abrirEdicao} remover={remover} />
-                      <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} abrirEdicao={abrirEdicao} remover={remover} />
-                      <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} abrirEdicao={abrirEdicao} remover={remover} />
+                      <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                      <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                      <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
                     </div>
 
                     <ResumoFinanceiro 
