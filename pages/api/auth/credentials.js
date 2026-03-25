@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../_lib/prisma.js';
-import { createToken, getAuthPayload, readActiveCredentials } from '../_lib/auth.js';
+import { createToken, getAuthPayload, isAdminAuth, readActiveCredentials } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -8,8 +8,8 @@ export default async function handler(req, res) {
   }
 
   const auth = getAuthPayload(req);
-  if (!auth) {
-    return res.status(401).json({ error: 'Não autenticado.' });
+  if (!isAdminAuth(auth)) {
+    return res.status(403).json({ error: 'Apenas o administrador pode alterar estas credenciais.' });
   }
 
   try {
@@ -59,7 +59,11 @@ export default async function handler(req, res) {
       },
     });
 
-    const token = createToken(saved.username);
+    const token = createToken({
+      sub: 'admin',
+      username: saved.username,
+      role: 'admin',
+    });
     return res.status(200).json({
       message: 'Credenciais alteradas com sucesso.',
       token,

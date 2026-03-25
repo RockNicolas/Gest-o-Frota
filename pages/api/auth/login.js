@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+import prisma from '../_lib/prisma.js';
 import { createToken, readActiveCredentials } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
@@ -12,22 +14,52 @@ export default async function handler(req, res) {
     }
 
     const active = await readActiveCredentials();
-    const isUserValid = user.trim().toLowerCase() === active.user.trim().toLowerCase();
-    const isPasswordValid = await active.comparePassword(password);
+    const isAdminUser =
+      user.trim().toLowerCase() === active.user.trim().toLowerCase();
+    const isAdminPassword = await active.comparePassword(password);
 
-    if (!isUserValid || !isPasswordValid) {
+    if (isAdminUser && isAdminPassword) {
+      const token = createToken({
+        sub: 'admin',
+        username: active.user,
+        role: 'admin',
+      });
+      return res.status(200).json({
+        token,
+        username: active.user,
+        mode: active.mode,
+        role: 'admin',
+      });
+    }
+
+    const normalized = user.trim().toLowerCase();
+    const appUser = await prisma.user.findUnique({
+      where: { username: normalized },
+    });
+
+    if (!appUser) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
     }
 
-    const token = createToken(active.user);
+    const ok = await bcrypt.compare(password, appUser.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+    }
+
+    const token = createToken({
+      sub: appUser.id,
+      username: appUser.username,
+      role: appUser.role,
+    });
+
     return res.status(200).json({
       token,
-      username: active.user,
-      mode: active.mode,
+      username: appUser.username,
+      mode: 'app_user',
+      role: appUser.role,
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Erro ao autenticar.' });
   }
 }
-

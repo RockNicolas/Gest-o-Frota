@@ -8,18 +8,34 @@ import ResumoFinanceiro from './components/ResumoFinanceiro';
 import ListaCliente from './components/cliente/ListaCliente';
 import ModalDetalhes from './components/cliente/ModalDetalhes';
 
+function readRoleFromToken(token) {
+  if (!token) return null;
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = JSON.parse(atob(padded));
+    return json.role || 'admin';
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const API_URL_PRIMARY = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://127.0.0.1:3001');
   const API_URL_FALLBACK = import.meta.env.PROD ? '' : 'http://127.0.0.1:3001';
   const ADMIN_AUTH_TOKEN_KEY = 'admin_auth_token';
+  const AUTH_ROLE_KEY = 'auth_role';
 
   const apiFetch = async (endpoint, options = {}) => {
-    const token = localStorage.getItem(ADMIN_AUTH_TOKEN_KEY);
+    const { skipAuth, ...fetchOptions } = options;
+    const token = skipAuth ? null : localStorage.getItem(ADMIN_AUTH_TOKEN_KEY);
     const headers = {
-      ...(options.headers || {}),
+      ...(fetchOptions.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-    const requestOptions = { ...options, headers };
+    const requestOptions = { ...fetchOptions, headers };
 
     try {
       return await fetch(`${API_URL_PRIMARY}${endpoint}`, requestOptions);
@@ -38,6 +54,12 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem(ADMIN_AUTH_TOKEN_KEY));
+  const [authRole, setAuthRole] = useState(() => {
+    const token = localStorage.getItem(ADMIN_AUTH_TOKEN_KEY);
+    const fromJwt = readRoleFromToken(token);
+    if (fromJwt) return fromJwt;
+    return localStorage.getItem(AUTH_ROLE_KEY) || 'admin';
+  });
   const [login, setLogin] = useState({ user: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -51,6 +73,21 @@ function App() {
     confirmarNovaSenha: '',
   });
   const [credentialsFeedback, setCredentialsFeedback] = useState({ erro: '', sucesso: '' });
+  const [novoUsuarioForm, setNovoUsuarioForm] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [novoUsuarioFeedback, setNovoUsuarioFeedback] = useState({ erro: '', sucesso: '' });
+  const [listaUsuarios, setListaUsuarios] = useState([]);
+  const [cadastroPublicoForm, setCadastroPublicoForm] = useState({
+    signupSecret: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [cadastroPublicoFeedback, setCadastroPublicoFeedback] = useState({ erro: '', sucesso: '' });
+  const [showSignupSecret, setShowSignupSecret] = useState(false);
 
   const [form, setForm] = useState({ 
     nome: '', 
@@ -81,6 +118,25 @@ function App() {
   useEffect(() => {
     localStorage.setItem('registros_montecristo', JSON.stringify(registros));
   }, [registros]);
+
+  const carregarUsuarios = async () => {
+    if (authRole !== 'admin') return;
+    try {
+      const resp = await apiFetch('/api/users');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      setListaUsuarios(data);
+    } catch (e) {
+      console.error('Erro ao listar usuários:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && authRole === 'admin') {
+      carregarUsuarios();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, authRole]);
 
   const adicionar = async (e) => {
     e.preventDefault();
@@ -151,6 +207,7 @@ function App() {
     try {
       const resp = await apiFetch('/api/auth/login', {
         method: 'POST',
+        skipAuth: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user: login.user,
@@ -166,6 +223,9 @@ function App() {
       const data = await resp.json();
       localStorage.setItem(ADMIN_AUTH_TOKEN_KEY, data.token);
       localStorage.setItem('admin_username', data.username);
+      const role = data.role || 'admin';
+      localStorage.setItem(AUTH_ROLE_KEY, role);
+      setAuthRole(role);
       setAdminUsername(data.username);
       setIsAuthenticated(true);
       setLoginError('');
@@ -177,9 +237,12 @@ function App() {
 
   const sairPainel = () => {
     localStorage.removeItem(ADMIN_AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_ROLE_KEY);
+    setAuthRole('admin');
     setIsAuthenticated(false);
     setIsModalOpen(false);
     setItemEditando(null);
+    setListaUsuarios([]);
   };
 
   const alterarCredenciais = async (e) => {
@@ -204,6 +267,8 @@ function App() {
 
       localStorage.setItem(ADMIN_AUTH_TOKEN_KEY, data.token);
       localStorage.setItem('admin_username', data.username);
+      localStorage.setItem(AUTH_ROLE_KEY, 'admin');
+      setAuthRole('admin');
       setAdminUsername(data.username);
       setCredentialsForm({
         usuarioAtual: '',
@@ -215,6 +280,64 @@ function App() {
       setCredentialsFeedback({ erro: '', sucesso: data.message || 'Credenciais atualizadas com sucesso.' });
     } catch (err) {
       setCredentialsFeedback({ erro: err.message || 'Falha ao atualizar credenciais.', sucesso: '' });
+    }
+  };
+
+  const cadastrarNovoUsuario = async (e) => {
+    e.preventDefault();
+    try {
+      const resp = await apiFetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: novoUsuarioForm.username,
+          password: novoUsuarioForm.password,
+          confirmPassword: novoUsuarioForm.confirmPassword,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+      setNovoUsuarioForm({ username: '', password: '', confirmPassword: '' });
+      setNovoUsuarioFeedback({ erro: '', sucesso: data.message || 'Usuário criado.' });
+      await carregarUsuarios();
+    } catch (err) {
+      setNovoUsuarioFeedback({ erro: err.message || 'Falha ao cadastrar.', sucesso: '' });
+    }
+  };
+
+  const cadastroPublico = async (e) => {
+    e.preventDefault();
+    setCadastroPublicoFeedback({ erro: '', sucesso: '' });
+    try {
+      const resp = await apiFetch('/api/auth/signup', {
+        method: 'POST',
+        skipAuth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signupSecret: cadastroPublicoForm.signupSecret,
+          username: cadastroPublicoForm.username,
+          password: cadastroPublicoForm.password,
+          confirmPassword: cadastroPublicoForm.confirmPassword,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+      setCadastroPublicoForm({
+        signupSecret: '',
+        username: '',
+        password: '',
+        confirmPassword: '',
+      });
+      setCadastroPublicoFeedback({
+        erro: '',
+        sucesso: data.message || 'Conta criada. Agora você pode entrar com seu usuário e senha.',
+      });
+    } catch (err) {
+      setCadastroPublicoFeedback({ erro: err.message || 'Falha ao cadastrar.', sucesso: '' });
     }
   };
 
@@ -283,13 +406,75 @@ function App() {
           <Route path="/admin" element={
             isAuthenticated ? (
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
-              <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
-                <h1 className="font-black uppercase tracking-widest text-sm">Painel Administrativo - Monte Cristo</h1>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
+                <div>
+                  <h1 className="font-black uppercase tracking-widest text-sm">Painel Administrativo - Monte Cristo</h1>
+                  <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-wider">
+                    Sessão: {authRole === 'admin' ? 'Administrador' : 'Usuário'}
+                  </p>
+                </div>
                 <button onClick={sairPainel} className="bg-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</button>
               </div>
 
               <Formulario form={form} setForm={setForm} adicionar={adicionar} />
 
+              {authRole === 'admin' ? (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Usuários do sistema</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Cadastre usuários que acessam este painel com permissão de operador (sem alterar o administrador principal).
+                </p>
+                <form onSubmit={cadastrarNovoUsuario} className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
+                  <input
+                    type="text"
+                    placeholder="Nome de usuário"
+                    value={novoUsuarioForm.username}
+                    onChange={(e) => setNovoUsuarioForm({ ...novoUsuarioForm, username: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    autoComplete="off"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Senha"
+                    value={novoUsuarioForm.password}
+                    onChange={(e) => setNovoUsuarioForm({ ...novoUsuarioForm, password: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Confirmar senha"
+                    value={novoUsuarioForm.confirmPassword}
+                    onChange={(e) => setNovoUsuarioForm({ ...novoUsuarioForm, confirmPassword: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black py-3 px-4 rounded-xl transition-all uppercase text-[10px] tracking-widest">
+                    Cadastrar usuário
+                  </button>
+                </form>
+                {novoUsuarioFeedback.erro ? <p className="text-sm text-red-600 font-semibold mt-3">{novoUsuarioFeedback.erro}</p> : null}
+                {novoUsuarioFeedback.sucesso ? <p className="text-sm text-green-700 font-semibold mt-3">{novoUsuarioFeedback.sucesso}</p> : null}
+                {listaUsuarios.length > 0 ? (
+                  <div className="mt-6 border-t border-slate-100 pt-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Usuários cadastrados</p>
+                    <ul className="space-y-2 text-sm">
+                      {listaUsuarios.map((u) => (
+                        <li key={u.id} className="flex justify-between bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                          <span className="font-bold text-slate-800">{u.username}</span>
+                          <span className="text-slate-500 text-xs">{new Date(u.createdAt).toLocaleDateString('pt-BR')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+              ) : null}
+
+              {authRole === 'admin' ? (
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
                 <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Segurança do Painel</h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -346,6 +531,7 @@ function App() {
                 {credentialsFeedback.erro ? <p className="text-sm text-red-600 font-semibold mt-3">{credentialsFeedback.erro}</p> : null}
                 {credentialsFeedback.sucesso ? <p className="text-sm text-green-700 font-semibold mt-3">{credentialsFeedback.sucesso}</p> : null}
               </div>
+              ) : null}
 
               <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
                 <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
@@ -402,14 +588,118 @@ function App() {
             )
           } />
 
+          <Route path="/cadastro" element={
+            isAuthenticated ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-8">
+                  <h1 className="text-2xl font-black uppercase italic tracking-tight text-slate-800">Criar conta</h1>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Cadastro liberado apenas com o código fornecido pelo administrador. Sem alteração no servidor, este fluxo fica desligado.
+                  </p>
+
+                  <form onSubmit={cadastroPublico} className="mt-6 space-y-4">
+                    <div className="relative">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+                        Código de cadastro
+                      </label>
+                      <input
+                        type={showSignupSecret ? 'text' : 'password'}
+                        value={cadastroPublicoForm.signupSecret}
+                        onChange={(e) =>
+                          setCadastroPublicoForm({ ...cadastroPublicoForm, signupSecret: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="off"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupSecret((prev) => !prev)}
+                        className="absolute top-[2.4rem] right-3 text-slate-500 hover:text-slate-700"
+                        aria-label={showSignupSecret ? 'Ocultar código' : 'Mostrar código'}
+                      >
+                        {showSignupSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+                        Nome de usuário
+                      </label>
+                      <input
+                        value={cadastroPublicoForm.username}
+                        onChange={(e) =>
+                          setCadastroPublicoForm({ ...cadastroPublicoForm, username: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="username"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+                        Senha
+                      </label>
+                      <input
+                        type="password"
+                        value={cadastroPublicoForm.password}
+                        onChange={(e) =>
+                          setCadastroPublicoForm({ ...cadastroPublicoForm, password: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+                        Confirmar senha
+                      </label>
+                      <input
+                        type="password"
+                        value={cadastroPublicoForm.confirmPassword}
+                        onChange={(e) =>
+                          setCadastroPublicoForm({ ...cadastroPublicoForm, confirmPassword: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+
+                    {cadastroPublicoFeedback.erro ? (
+                      <p className="text-sm text-red-600 font-semibold">{cadastroPublicoFeedback.erro}</p>
+                    ) : null}
+                    {cadastroPublicoFeedback.sucesso ? (
+                      <p className="text-sm text-green-700 font-semibold">{cadastroPublicoFeedback.sucesso}</p>
+                    ) : null}
+
+                    <button
+                      type="submit"
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl shadow-lg transition-all uppercase text-xs tracking-widest"
+                    >
+                      Cadastrar
+                    </button>
+                  </form>
+
+                  <div className="mt-5 text-center space-y-2">
+                    <Link to="/login" className="block text-sm text-slate-600 hover:text-slate-800 font-semibold">
+                      Já tenho conta — entrar
+                    </Link>
+                    <Link to="/" className="block text-sm text-slate-600 hover:text-slate-800 font-semibold">
+                      Voltar para a página inicial
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )
+          } />
+
           <Route path="/login" element={
             isAuthenticated ? (
               <Navigate to="/admin" replace />
             ) : (
               <div className="min-h-screen flex items-center justify-center p-4">
                 <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-8">
-                  <h1 className="text-2xl font-black uppercase italic tracking-tight text-slate-800">Acesso Admin</h1>
-                  <p className="text-sm text-slate-500 mt-2">Entre com usuário e senha para acessar o painel administrativo.</p>
+                  <h1 className="text-2xl font-black uppercase italic tracking-tight text-slate-800">Acesso ao painel</h1>
+                  <p className="text-sm text-slate-500 mt-2">Entre com administrador ou usuário cadastrado para acessar o painel.</p>
 
                   <form onSubmit={autenticar} className="mt-6 space-y-4">
                     <div>
@@ -449,8 +739,11 @@ function App() {
                     </button>
                   </form>
 
-                  <div className="mt-5 text-center">
-                    <Link to="/" className="text-sm text-slate-600 hover:text-slate-800 font-semibold">
+                  <div className="mt-5 text-center space-y-2">
+                    <Link to="/cadastro" className="block text-sm text-slate-600 hover:text-slate-800 font-semibold">
+                      Criar conta (código de cadastro)
+                    </Link>
+                    <Link to="/" className="block text-sm text-slate-600 hover:text-slate-800 font-semibold">
                       Voltar para a página inicial
                     </Link>
                   </div>

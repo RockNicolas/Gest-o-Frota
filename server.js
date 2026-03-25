@@ -5,6 +5,8 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { createAppUser } from './pages/api/_lib/createAppUser.js';
+import { isSignupEnabled, isSignupSecretValid } from './pages/api/_lib/signupSecret.js';
 
 const app = express();
 app.use(cors());
@@ -43,8 +45,8 @@ const readActiveCredentials = async () => {
   };
 };
 
-const createToken = (username) =>
-  jwt.sign({ sub: 'admin', username }, JWT_SECRET, { expiresIn: AUTH_TOKEN_EXPIRES_IN });
+const createToken = ({ sub, username, role }) =>
+  jwt.sign({ sub, username, role }, JWT_SECRET, { expiresIn: AUTH_TOKEN_EXPIRES_IN });
 
 const requireAuth = (req, res, next) => {
   try {
@@ -55,6 +57,7 @@ const requireAuth = (req, res, next) => {
 
     const token = authHeader.slice('Bearer '.length);
     const payload = jwt.verify(token, JWT_SECRET);
+    if (!payload.role) payload.role = 'admin';
     req.auth = payload;
     return next();
   } catch (error) {
@@ -62,6 +65,8 @@ const requireAuth = (req, res, next) => {
     return res.status(401).json({ error: 'Token inválido ou expirado.' });
   }
 };
+
+const isAdminAuth = (auth) => auth && auth.role === 'admin';
 
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -71,18 +76,49 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const active = await readActiveCredentials();
-    const isUserValid = user.trim().toLowerCase() === active.user.trim().toLowerCase();
-    const isPasswordValid = await active.comparePassword(password);
+    const isAdminUser =
+      user.trim().toLowerCase() === active.user.trim().toLowerCase();
+    const isAdminPassword = await active.comparePassword(password);
 
-    if (!isUserValid || !isPasswordValid) {
+    if (isAdminUser && isAdminPassword) {
+      const token = createToken({
+        sub: 'admin',
+        username: active.user,
+        role: 'admin',
+      });
+      return res.status(200).json({
+        token,
+        username: active.user,
+        mode: active.mode,
+        role: 'admin',
+      });
+    }
+
+    const normalized = user.trim().toLowerCase();
+    const appUser = await prisma.user.findUnique({
+      where: { username: normalized },
+    });
+
+    if (!appUser) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
     }
 
-    const token = createToken(active.user);
+    const ok = await bcrypt.compare(password, appUser.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+    }
+
+    const token = createToken({
+      sub: appUser.id,
+      username: appUser.username,
+      role: appUser.role,
+    });
+
     return res.status(200).json({
       token,
-      username: active.user,
-      mode: active.mode,
+      username: appUser.username,
+      mode: 'app_user',
+      role: appUser.role,
     });
   } catch (error) {
     console.error(error);
@@ -90,7 +126,33 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/auth/signup', async (req, res) => {
+  if (!isSignupEnabled()) {
+    return res.status(403).json({
+      error:
+        'Cadastro por código não está habilitado. Configure SIGNUP_SECRET no servidor ou peça acesso ao administrador.',
+    });
+  }
+  try {
+    const { signupSecret, username, password, confirmPassword } = req.body ?? {};
+    if (!signupSecret || !String(signupSecret).trim()) {
+      return res.status(400).json({ error: 'Informe o código de cadastro.' });
+    }
+    if (!isSignupSecretValid(signupSecret, globalThis.process.env.SIGNUP_SECRET)) {
+      return res.status(401).json({ error: 'Código de cadastro inválido.' });
+    }
+    const result = await createAppUser(prisma, { username, password, confirmPassword });
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao cadastrar usuário.' });
+  }
+});
+
 app.put('/api/auth/credentials', requireAuth, async (req, res) => {
+  if (!isAdminAuth(req.auth)) {
+    return res.status(403).json({ error: 'Apenas o administrador pode alterar estas credenciais.' });
+  }
   try {
     const {
       currentUser,
@@ -138,7 +200,11 @@ app.put('/api/auth/credentials', requireAuth, async (req, res) => {
       },
     });
 
-    const token = createToken(saved.username);
+    const token = createToken({
+      sub: 'admin',
+      username: saved.username,
+      role: 'admin',
+    });
     return res.status(200).json({
       message: 'Credenciais alteradas com sucesso.',
       token,
@@ -147,6 +213,41 @@ app.put('/api/auth/credentials', requireAuth, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Erro ao atualizar credenciais.' });
+  }
+});
+
+app.post('/api/auth/register', requireAuth, async (req, res) => {
+  if (!isAdminAuth(req.auth)) {
+    return res.status(403).json({ error: 'Apenas o administrador pode cadastrar novos usuários.' });
+  }
+  try {
+    const { username, password, confirmPassword } = req.body ?? {};
+    const result = await createAppUser(prisma, { username, password, confirmPassword });
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao cadastrar usuário.' });
+  }
+});
+
+app.get('/api/users', requireAuth, async (req, res) => {
+  if (!isAdminAuth(req.auth)) {
+    return res.status(403).json({ error: 'Apenas o administrador pode listar usuários.' });
+  }
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao listar usuários.' });
   }
 });
 

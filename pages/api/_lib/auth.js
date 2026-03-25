@@ -27,8 +27,8 @@ export const readActiveCredentials = async () => {
   };
 };
 
-export const createToken = (username) =>
-  jwt.sign({ sub: 'admin', username }, JWT_SECRET, { expiresIn: AUTH_TOKEN_EXPIRES_IN });
+export const createToken = ({ sub, username, role }) =>
+  jwt.sign({ sub, username, role }, JWT_SECRET, { expiresIn: AUTH_TOKEN_EXPIRES_IN });
 
 export const getAuthPayload = (req) => {
   const authHeader = req.headers.authorization || '';
@@ -36,9 +36,14 @@ export const getAuthPayload = (req) => {
 
   const token = authHeader.slice('Bearer '.length);
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
+    // Tokens antigos sem role: tratar como administrador
+    if (!payload.role) payload.role = 'admin';
+    return payload;
   } catch {
     return null;
   }
 };
+
+export const isAdminAuth = (auth) => auth && auth.role === 'admin';
 

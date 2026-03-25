@@ -34,3 +34,14 @@ model AdminCredential {
 
   @@map("admin_credentials")
 }
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique // armazenado em minúsculas para login consistente
+  passwordHash String
+  role         String   @default("user") // "user" — administrador é via AdminCredential
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
