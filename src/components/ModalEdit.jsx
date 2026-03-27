@@ -1,6 +1,13 @@
 import React from 'react';
 import { X, Check, DollarSign } from 'lucide-react';
 
+const OPCOES_TANQUE = [
+  { id: 'reserva.png', label: 'Reserva' },
+  { id: '1-4.png', label: '1/4' },
+  { id: '1-2.png', label: '1/2' },
+  { id: '3-4.png', label: '3/4' },
+];
+
 const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
   if (!isOpen || !item) return null;
 
@@ -22,7 +29,26 @@ const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
           <div className="grid grid-cols-3 gap-4">
             <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-blue-600 text-center" value={item.valor} onChange={e => setItem({...item, valor: e.target.value})}/>
             <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-green-600 text-center" value={item.litros} onChange={e => setItem({...item, litros: e.target.value})}/>
-            <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-red-600 text-center" value={item.precoLitro} onChange={e => setItem({...item, precoLitro: e.target.value})}/>
+            <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-red-600 text-center" value={item.custo} onChange={e => setItem({...item, custo: e.target.value})}/>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Tanque antes do abastecimento</p>
+            <div className="flex flex-wrap gap-3">
+              {OPCOES_TANQUE.map((opcao) => {
+                const selecionada = item.tanqueAntesImagem === opcao.id;
+                return (
+                  <button
+                    key={opcao.id}
+                    type="button"
+                    onClick={() => setItem({ ...item, tanqueAntesImagem: opcao.id })}
+                    className={`px-3 py-2 rounded-xl border text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${selecionada ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${selecionada ? 'bg-blue-600' : 'bg-slate-300'}`}></span>
+                    {opcao.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex gap-3 pt-4">
             <button onClick={fechar} className="flex-1 py-3 font-bold text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>

@@ -1,6 +1,22 @@
 import React from 'react';
 import { Edit3, Trash2 } from 'lucide-react';
 
+const obterLitrosCalculo = (item) => {
+  const texto = String(item.observacoes || '');
+  const match = texto.match(/\[\[LITROS_CALC:([0-9.,]+)\]\]/);
+  if (!match) return Number(item.litros || 0);
+  const valor = Number(String(match[1]).replace(',', '.'));
+  return Number.isFinite(valor) ? valor : Number(item.litros || 0);
+};
+
+const formatarUso = (item) => {
+  const valor = Number(item.valor || 0);
+  if (item.categoria === 'Máquina') {
+    return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+};
+
 const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', abrirEdicao, remover }) => {
   const maiorCusto = Math.max(...itens.map(i => Number(modoBarra === 'valor' ? i.valor : i.custo)), 1);
   
@@ -28,9 +44,10 @@ const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', a
           const larguraBarra = (Number(modoBarra === 'valor' ? item.valor : item.custo) / maiorCusto) * 100;
           const unidade = item.categoria === 'Máquina' ? 'h' : 'km';
           const consumoSufixo = item.categoria === 'Máquina' ? 'L/h' : 'km/L';
+          const litrosCalculo = obterLitrosCalculo(item);
           const consumo = item.categoria === 'Máquina' 
-            ? (item.valor > 0 ? (item.litros / item.valor).toFixed(2) : 0)
-            : (item.litros > 0 ? (item.valor / item.litros).toFixed(2) : 0);
+            ? (item.valor > 0 ? (litrosCalculo / item.valor).toFixed(2) : 0)
+            : (litrosCalculo > 0 ? (item.valor / litrosCalculo).toFixed(2) : 0);
 
           return (
             <div key={item.id} className="group flex flex-col gap-1 cursor-pointer hover:-translate-y-0.5 transition-all duration-200">
@@ -44,7 +61,7 @@ const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', a
                     style={{ width: `${larguraBarra}%` }}
                   ></div>
                   <span className="text-[14px] absolute inset-0 flex items-center justify-end pr-4 font-black text-slate-800 italic">
-                    {item.valor}{unidade} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.precoLitro).toFixed(2)} | R$ {Number(item.custo).toFixed(2)}
+                    {formatarUso(item)}{unidade} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex gap-1 text-black">

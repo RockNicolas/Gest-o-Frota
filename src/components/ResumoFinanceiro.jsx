@@ -10,8 +10,6 @@ const ResumoFinanceiro = ({
 }) => {
   return (
     <div className="md:col-span-3 border-t-2 border-slate-100 pt-10 grid md:grid-cols-3 gap-8 items-center text-center">
-      
-      {/* Coluna 1: Volume em Litros */}
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border-l-4 border-[#f97316] shadow-sm text-left">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Diesel (Lts)</span>
@@ -27,7 +25,6 @@ const ResumoFinanceiro = ({
         </div>
       </div>
 
-      {/* Coluna 2: Gráfico Circular */}
       <div className="flex flex-col items-center gap-2">
         <div 
           className="w-32 h-32 rounded-full shadow-xl flex items-center justify-center relative border-4 border-white"
@@ -38,7 +35,6 @@ const ResumoFinanceiro = ({
         <p className="text-[10px] font-black text-slate-400 uppercase mt-2 italic">DIESEL X GASOLINA</p>
       </div>
 
-      {/* Coluna 3: Custos Financeiros */}
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-white p-4 rounded-2xl border-l-4 border-red-500 shadow-lg border border-slate-100 text-left">
           <span className="text-[10px] font-black text-slate-400 uppercase">Custo Diesel</span>

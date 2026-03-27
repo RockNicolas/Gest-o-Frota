@@ -1,5 +1,21 @@
 import React from 'react';
 
+const obterLitrosCalculo = (item) => {
+  const texto = String(item.observacoes || '');
+  const match = texto.match(/\[\[LITROS_CALC:([0-9.,]+)\]\]/);
+  if (!match) return Number(item.litros || 0);
+  const valor = Number(String(match[1]).replace(',', '.'));
+  return Number.isFinite(valor) ? valor : Number(item.litros || 0);
+};
+
+const formatarUso = (item) => {
+  const valor = Number(item.valor || 0);
+  if (item.categoria === 'Máquina') {
+    return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+};
+
 const ListaCliente = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', aoSelecionar }) => {
   const maiorValor = Math.max(...itens.map(i => Number(modoBarra === 'valor' ? i.valor : i.custo)), 1);
   
@@ -27,10 +43,11 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', aoS
           const larguraBarra = (Number(modoBarra === 'valor' ? item.valor : item.custo) / maiorValor) * 100;
           const unidade = item.categoria === 'Máquina' ? 'h' : 'km';
           const consumoSufixo = item.categoria === 'Máquina' ? 'L/h' : 'km/L';
+          const litrosCalculo = obterLitrosCalculo(item);
           const consumo = item.categoria === 'Máquina' 
-            ? (item.valor > 0 ? (item.litros / item.valor).toFixed(2) : 0)
-            : (item.litros > 0 ? (item.valor / item.litros).toFixed(2) : 0);
-          const modoLabel = modoBarra === 'valor' ? `${item.valor}${unidade}` : `R$ ${Number(item.custo).toFixed(2)}`;
+            ? (item.valor > 0 ? (litrosCalculo / item.valor).toFixed(2) : 0)
+            : (litrosCalculo > 0 ? (item.valor / litrosCalculo).toFixed(2) : 0);
+          const modoLabel = modoBarra === 'valor' ? `${formatarUso(item)}${unidade}` : `R$ ${Number(item.custo).toFixed(2)}`;
 
           return (
             <div 
