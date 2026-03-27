@@ -54,17 +54,20 @@ const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', a
               <span className="font-black text-slate-900 text-[18px] uppercase">
                 {item.nome} <span className="text-slate-400 font-bold ml-1">- {item.motorista}</span>
               </span>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden shadow-sm border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 bg-slate-100 min-h-12 sm:h-10 rounded-lg relative overflow-hidden shadow-sm border border-slate-200">
                   <div 
                     className={`h-full transition-all duration-500 ${corBG}`} 
                     style={{ width: `${larguraBarra}%` }}
                   ></div>
-                  <span className="text-[14px] absolute inset-0 flex items-center justify-end pr-4 font-black text-slate-800 italic">
+                  <span className="hidden sm:flex text-[12px] lg:text-[14px] absolute inset-0 items-center justify-end pr-4 font-black text-slate-800 italic">
                     {formatarUso(item)}{unidade} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
                   </span>
                 </div>
-                <div className="flex gap-1 text-black">
+                <div className="sm:hidden text-[12px] font-black text-slate-700 italic bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  {formatarUso(item)}{unidade} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
+                </div>
+                <div className="flex gap-1 text-black self-end sm:self-auto">
                   <button onClick={() => abrirEdicao(item)} className="hover:text-blue-500"><Edit3 size={20}/></button>
                   <button onClick={() => remover(item.id)} className="hover:text-red-500"><Trash2 size={20}/></button>
                 </div>

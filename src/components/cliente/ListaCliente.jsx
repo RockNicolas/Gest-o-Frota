@@ -58,12 +58,15 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', aoS
               <span className="font-black text-slate-900 text-[18px] uppercase">
                 {item.nome} <span className="text-slate-400 font-bold ml-1">- {item.motorista}</span>
               </span>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-slate-100 h-10 rounded-lg relative overflow-hidden shadow-sm border border-slate-200">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1 bg-slate-100 min-h-12 sm:h-10 rounded-lg relative overflow-hidden shadow-sm border border-slate-200">
                   <div className={`h-full ${corBG} transition-all duration-500`} style={{ width: `${larguraBarra}%` }}></div>
-                  <span className="text-[14px] absolute inset-0 flex items-center justify-end pr-4 font-black text-slate-800 italic">
+                  <span className="hidden sm:flex text-[12px] lg:text-[14px] absolute inset-0 items-center justify-end pr-4 font-black text-slate-800 italic">
                     {modoLabel} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
                   </span>
+                </div>
+                <div className="sm:hidden text-[12px] font-black text-slate-700 italic bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  {modoLabel} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
                 </div>
               </div>
             </div>

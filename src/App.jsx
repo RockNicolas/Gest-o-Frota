@@ -464,23 +464,23 @@ function App() {
           <Route path="/" element={
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
               <div id="print-area" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
-                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
-                  <div className="flex items-center gap-6"> 
-                    <img src="./company_2.png" alt="Logo" className="w-16 h-16 object-contain" />
+                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-6 md:p-10 text-white flex flex-col gap-6 lg:flex-row lg:justify-between lg:items-center">
+                  <div className="flex items-center gap-4 md:gap-6 min-w-0"> 
+                    <img src="./company_2.png" alt="Logo" className="w-14 h-14 md:w-16 md:h-16 object-contain shrink-0" />
                     <div>
-                      <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">Relatório Monte Cristo</h2>
-                      <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
+                      <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">Relatório Monte Cristo</h2>
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-red-500 font-bold uppercase text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em]">
                         <TrendingUp size={14}/> Controle de Frota Ativo
                       </div>
                     </div>
                   </div>
-                  <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                  <div className="text-left lg:text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md self-start lg:self-auto w-full lg:w-auto">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo Semanal</p>
-                    <p className="text-3xl font-black text-red-500">R$ {formatarMoedaBR(totalGeral)}</p>
+                    <p className="text-2xl md:text-3xl font-black text-red-500">R$ {formatarMoedaBR(totalGeral)}</p>
                   </div>
                 </div>
 
-                <div className="p-8 md:p-12">
+                <div className="p-5 md:p-12">
                   <div className="flex flex-wrap items-center gap-3 mb-4">
                     <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
                     <button
@@ -514,14 +514,14 @@ function App() {
           <Route path="/admin" element={
             isAuthenticated ? (
             <div className="p-4 md:p-10 space-y-6 max-w-9xl mx-auto">
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center bg-slate-900 p-6 rounded-3xl text-white shadow-xl">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center bg-slate-900 p-4 md:p-6 rounded-3xl text-white shadow-xl">
                 <div>
                   <h1 className="font-black uppercase tracking-widest text-sm">Painel Administrativo - Monte Cristo</h1>
                   <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-wider">
                     Sessão: {authRole === 'admin' ? 'Administrador' : 'Usuário'}
                   </p>
                 </div>
-                <div className="relative flex items-center gap-2">
+                <div className="relative flex flex-wrap items-center gap-2 sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setIsUserMenuOpen((prev) => !prev)}
@@ -530,7 +530,7 @@ function App() {
                   >
                     <User size={18} />
                   </button>
-                  <button onClick={sairPainel} className="bg-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</button>
+                  <button onClick={sairPainel} className="bg-red-600 px-4 md:px-6 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase hover:bg-red-700 transition-all">Sair do Painel</button>
 
                   {isUserMenuOpen ? (
                     <div className="absolute right-0 top-12 w-48 bg-white text-slate-800 rounded-xl border border-slate-200 shadow-2xl overflow-hidden z-50">
@@ -577,7 +577,7 @@ function App() {
                       </button>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200">
                       <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Usuários do sistema</h2>
                       <p className="text-xs text-slate-500 mt-1">
                         Cadastre usuários que acessam este painel com permissão de operador (sem alterar o administrador principal).
@@ -631,7 +631,7 @@ function App() {
                       ) : null}
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200">
                       <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Segurança do Painel</h2>
                       <p className="text-xs text-slate-500 mt-1">
                         Atualize aqui o usuário e a senha de acesso do painel administrativo.
@@ -692,23 +692,23 @@ function App() {
               ) : null}
 
               <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200">
-                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 text-white flex justify-between items-center">
-                  <div className="flex items-center gap-6"> 
-                    <img src="./company_2.png" alt="Logo" className="w-16 h-16 object-contain" />
+                <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-6 md:p-10 text-white flex flex-col gap-6 lg:flex-row lg:justify-between lg:items-center">
+                  <div className="flex items-center gap-4 md:gap-6 min-w-0"> 
+                    <img src="./company_2.png" alt="Logo" className="w-14 h-14 md:w-16 md:h-16 object-contain shrink-0" />
                     <div>
-                      <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">Gestão de Frota Ativa</h2>
-                      <div className="flex items-center gap-2 mt-2 text-red-500 font-bold uppercase text-xs tracking-[0.3em]">
+                      <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">Gestão de Frota Ativa</h2>
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-red-500 font-bold uppercase text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em]">
                         <TrendingUp size={14}/> Dashboard Administrativo
                       </div>
                     </div>
                   </div>
-                  <div className="text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                  <div className="text-left lg:text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md self-start lg:self-auto w-full lg:w-auto">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo Total Acumulado</p>
-                    <p className="text-3xl font-black text-red-500 font-mono">R$ {formatarMoedaBR(totalGeral)}</p>
+                    <p className="text-2xl md:text-3xl font-black text-red-500 font-mono">R$ {formatarMoedaBR(totalGeral)}</p>
                   </div>
                 </div>
 
-                <div className="p-8 md:p-12">
+                <div className="p-5 md:p-12">
                     <div className="flex flex-wrap items-center gap-3 mb-4">
                       <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
                       <button

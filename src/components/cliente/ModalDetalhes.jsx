@@ -45,14 +45,14 @@ const ModalDetalhes = ({ item, fechar }) => {
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200 text-left">
-        <div className="bg-slate-900 p-8 text-white relative shrink-0">
+        <div className="bg-slate-900 p-5 md:p-8 text-white relative shrink-0">
           <button onClick={fechar} className="absolute top-6 right-6 bg-white/10 p-2 rounded-full hover:bg-red-500 transition-colors">
             <X size={20} />
           </button>
           <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-block">
             Detalhes do Registro
           </span>
-          <h3 className="text-4xl font-black uppercase italic tracking-tighter leading-none">{item.nome}</h3>
+          <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter leading-none pr-12">{item.nome}</h3>
           
           <div className="flex items-center gap-4 mt-4 text-slate-300 font-bold uppercase tracking-widest">
              <span className="flex items-center gap-2 text-xl">
@@ -62,8 +62,8 @@ const ModalDetalhes = ({ item, fechar }) => {
           </div>
         </div>
 
-        <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="p-5 md:p-8 space-y-6 overflow-y-auto custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Uso Registrado</p>
               <p className="text-xl font-black text-slate-800">{formatarUso(item)} {unidadeUso}</p>
@@ -72,7 +72,7 @@ const ModalDetalhes = ({ item, fechar }) => {
               <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Volume</p>
               <p className="text-xl font-black text-blue-600">{item.litros} Litros</p>
             </div>
-            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 col-span-2 flex items-center justify-between">
+            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 sm:col-span-2 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black text-blue-400 uppercase mb-1">{labelConsumo}</p>
                 <p className="text-2xl font-black text-blue-700">{consumoMedio} <span className="text-sm">{sufixoConsumo}</span></p>

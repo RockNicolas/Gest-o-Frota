@@ -38,7 +38,7 @@ const Formulario = ({ form, setForm, adicionar }) => {
   const labelTotalUso = form.categoria === 'Máquina' ? 'Total de Horas' : 'Total de KM';
 
   return (
-    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+    <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-slate-200">
       <form onSubmit={adicionar} className="grid grid-cols-1 md:grid-cols-9 gap-4 items-end">
         <div>
           <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Identificação</label>
@@ -115,9 +115,9 @@ const Formulario = ({ form, setForm, adicionar }) => {
                   key={opcao.id}
                   type="button"
                   onClick={() => setForm({ ...form, tanqueAntesImagem: opcao.id })}
-                  className={`border rounded-2xl p-2 transition-all ${selecionada ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                  className={`border rounded-2xl p-2 transition-all min-w-0 ${selecionada ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
                 >
-                  <img src={`/tanque/${opcao.id}`} alt={`Tanque ${opcao.label}`} className="w-full h-24 object-contain" />
+                  <img src={`/tanque/${opcao.id}`} alt={`Tanque ${opcao.label}`} className="w-full h-20 md:h-24 object-contain" />
                   <p className="text-xs font-black text-slate-700 mt-2">{opcao.label}</p>
                 </button>
               );
@@ -138,7 +138,7 @@ const Formulario = ({ form, setForm, adicionar }) => {
           />
         </div>
 
-        <button disabled={!form.tanqueAntesImagem} className="bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
+        <button disabled={!form.tanqueAntesImagem} className="w-full md:w-auto bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
         <div className="md:col-span-9 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
           <p className="text-xs font-bold text-slate-600">
             Cálculo automático: (horímetro/km atual - anterior) e consumo = litros do 1º abastecimento / diferença.
