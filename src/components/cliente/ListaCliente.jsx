@@ -20,12 +20,12 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', aoS
   const maiorValor = Math.max(...itens.map(i => Number(modoBarra === 'valor' ? i.valor : i.custo)), 1);
   
   const coresBackground = {
-    'border-orange-500': 'bg-orange-500',
-    'border-green-600': 'bg-green-600',
-    'border-blue-600': 'bg-blue-500',
+    'border-orange-500': '#f97316',
+    'border-green-600': '#16a34a',
+    'border-blue-600': '#3b82f6',
   };
 
-  const corBG = coresBackground[corBarra] || 'bg-slate-400';
+  const corBG = coresBackground[corBarra] || '#94a3b8';
   const itensOrdenados = [...itens].sort((a, b) => {
     if (modoBarra === 'custo') {
       return Number(b.custo) - Number(a.custo);
@@ -47,20 +47,23 @@ const ListaCliente = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', aoS
           const consumo = item.categoria === 'Máquina' 
             ? (item.valor > 0 ? (litrosCalculo / item.valor).toFixed(2) : 0)
             : (litrosCalculo > 0 ? (item.valor / litrosCalculo).toFixed(2) : 0);
-          const modoLabel = modoBarra === 'valor' ? `${formatarUso(item)}${unidade}` : `R$ ${Number(item.custo).toFixed(2)}`;
+          const modoLabel = `${formatarUso(item)}${unidade}`;
 
           return (
             <div 
               key={item.id} 
-              className="group flex flex-col gap-1 cursor-pointer hover:-translate-y-0.5 transform transition-all duration-200"
+              className="group flex flex-col gap-1 cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
               onClick={() => aoSelecionar(item)}
             >
               <span className="font-black text-slate-900 text-[18px] uppercase">
                 {item.nome} <span className="text-slate-400 font-bold ml-1">- {item.motorista}</span>
               </span>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 bg-slate-100 min-h-12 sm:h-10 rounded-lg relative overflow-hidden shadow-sm border border-slate-200">
-                  <div className={`h-full ${corBG} transition-all duration-500`} style={{ width: `${larguraBarra}%` }}></div>
+                  <div
+                    className="absolute inset-y-0 left-0 transition-all duration-500"
+                    style={{ width: `${larguraBarra}%`, backgroundColor: corBG }}
+                  ></div>
                   <span className="hidden sm:flex text-[12px] lg:text-[14px] absolute inset-0 items-center justify-end pr-4 font-black text-slate-800 italic">
                     {modoLabel} | {item.litros}L | {consumo}{consumoSufixo} | R$ {Number(item.custo).toFixed(2)}
                   </span>

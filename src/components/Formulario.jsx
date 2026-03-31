@@ -30,9 +30,10 @@ const Formulario = ({ form, setForm, adicionar }) => {
   const litrosPrimeiroAbastecimento = parseNumeroEntrada(form.litrosAnterior, form.categoria);
   const deltaUso = medidorAtual - medidorAnterior;
   const totalHorasKm = deltaUso > 0 ? deltaUso.toFixed(2) : '';
+  const isMaquina = form.categoria === 'Máquina';
   const consumoCalculado =
     deltaUso > 0 && litrosPrimeiroAbastecimento > 0
-      ? (litrosPrimeiroAbastecimento / deltaUso).toFixed(2)
+      ? (isMaquina ? (litrosPrimeiroAbastecimento / deltaUso) : (deltaUso / litrosPrimeiroAbastecimento)).toFixed(2)
       : null;
 
   const labelTotalUso = form.categoria === 'Máquina' ? 'Total de Horas' : 'Total de KM';
@@ -141,10 +142,10 @@ const Formulario = ({ form, setForm, adicionar }) => {
         <button disabled={!form.tanqueAntesImagem} className="w-full md:w-auto bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
         <div className="md:col-span-9 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
           <p className="text-xs font-bold text-slate-600">
-            Cálculo automático: (horímetro/km atual - anterior) e consumo = litros do 1º abastecimento / diferença.
+            Cálculo automático: (horímetro/km atual - anterior) e consumo = {isMaquina ? 'litros do 1º abastecimento / diferença' : 'diferença / litros do 1º abastecimento'}.
           </p>
           <p className="text-xs font-black text-slate-800 mt-1">
-            {labelTotalUso}: {deltaUso > 0 ? deltaUso.toFixed(2) : '0.00'} | Consumo: {consumoCalculado || '--'} {form.categoria === 'Máquina' ? 'L/h' : 'L/km'}
+            {labelTotalUso}: {deltaUso > 0 ? deltaUso.toFixed(2) : '0.00'} | Consumo: {consumoCalculado || '--'} {isMaquina ? 'L/h' : 'km/L'}
           </p>
         </div>
       </form>

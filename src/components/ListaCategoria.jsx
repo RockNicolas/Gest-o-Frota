@@ -18,7 +18,7 @@ const formatarUso = (item) => {
 };
 
 const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', abrirEdicao, remover }) => {
-  const maiorCusto = Math.max(...itens.map(i => Number(modoBarra === 'valor' ? i.valor : i.custo)), 1);
+  const maiorEscala = Math.max(...itens.map(i => Number(modoBarra === 'valor' ? i.valor : i.custo)), 1);
   
   const coresBackground = {
     'border-orange-500': 'bg-orange-500',
@@ -41,7 +41,7 @@ const ListaCategoria = ({ titulo, icone, corBarra, itens, modoBarra = 'valor', a
       </h3>
       <div className="space-y-6">
         {itensOrdenados.map(item => {
-          const larguraBarra = (Number(modoBarra === 'valor' ? item.valor : item.custo) / maiorCusto) * 100;
+          const larguraBarra = (Number(modoBarra === 'valor' ? item.valor : item.custo) / maiorEscala) * 100;
           const unidade = item.categoria === 'Máquina' ? 'h' : 'km';
           const consumoSufixo = item.categoria === 'Máquina' ? 'L/h' : 'km/L';
           const litrosCalculo = obterLitrosCalculo(item);
