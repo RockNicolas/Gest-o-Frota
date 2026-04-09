@@ -47,6 +47,30 @@ function extrairLitrosCalculoMeta(observacoes) {
   return Number.isFinite(valor) ? valor : null;
 }
 
+function calcularMediaCategoria(registros, categoria, titulo) {
+  const itens = registros.filter((registro) => registro.categoria === categoria);
+  const totalUso = itens.reduce((acc, item) => acc + Math.max(Number(item.valor || 0), 0), 0);
+  const totalLitrosCalculo = itens.reduce((acc, item) => {
+    const litrosMeta = extrairLitrosCalculoMeta(item.observacoes);
+    const litrosBase = litrosMeta ?? Number(item.litros || 0);
+    return acc + Math.max(Number(litrosBase || 0), 0);
+  }, 0);
+  const isMaquina = categoria === 'Máquina';
+  const media = isMaquina
+    ? (totalUso > 0 ? totalLitrosCalculo / totalUso : 0)
+    : (totalLitrosCalculo > 0 ? totalUso / totalLitrosCalculo : 0);
+
+  return {
+    categoria,
+    titulo,
+    quantidade: itens.length,
+    media,
+    totalUso,
+    unidadeUso: isMaquina ? 'h' : 'km',
+    unidadeMedia: isMaquina ? 'L/h' : 'km/L',
+  };
+}
+
 function extrairTanqueImagemMeta(observacoes) {
   const texto = String(observacoes || '');
   const match = texto.match(/\[\[TANQUE_IMG:([^\]]+)\]\]/);
@@ -456,6 +480,11 @@ function App() {
   const custoDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.custo || 0), 0);
   const custoGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
   const percDiesel = totalLiters ? (litrosDiesel / totalLiters) * 100 : 50;
+  const mediasCategoria = [
+    calcularMediaCategoria(registros, 'Máquina', 'Retro / Máquinas'),
+    calcularMediaCategoria(registros, 'Caminhão', 'Caminhões'),
+    calcularMediaCategoria(registros, 'Veículo', 'Veículos'),
+  ];
 
   return (
     <Router>
@@ -503,6 +532,7 @@ function App() {
                   </div>
                   
                   <ResumoFinanceiro 
+                    mediasCategoria={mediasCategoria}
                     litrosDiesel={litrosDiesel} litrosGasolina={litrosGasolina} percDiesel={percDiesel} 
                     custoDiesel={custoDiesel} custoGasolina={custoGasolina} formatarMoedaBR={formatarMoedaBR} 
                   />
@@ -731,6 +761,7 @@ function App() {
                     </div>
 
                     <ResumoFinanceiro 
+                      mediasCategoria={mediasCategoria}
                       litrosDiesel={litrosDiesel} 
                       litrosGasolina={litrosGasolina} 
                       percDiesel={percDiesel} 
