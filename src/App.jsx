@@ -49,23 +49,35 @@ function extrairLitrosCalculoMeta(observacoes) {
 
 function calcularMediaCategoria(registros, categoria, titulo) {
   const itens = registros.filter((registro) => registro.categoria === categoria);
-  const totalUso = itens.reduce((acc, item) => acc + Math.max(Number(item.valor || 0), 0), 0);
-  const totalLitrosCalculo = itens.reduce((acc, item) => {
-    const litrosMeta = extrairLitrosCalculoMeta(item.observacoes);
-    const litrosBase = litrosMeta ?? Number(item.litros || 0);
-    return acc + Math.max(Number(litrosBase || 0), 0);
-  }, 0);
   const isMaquina = categoria === 'Máquina';
-  const media = isMaquina
-    ? (totalUso > 0 ? totalLitrosCalculo / totalUso : 0)
-    : (totalLitrosCalculo > 0 ? totalUso / totalLitrosCalculo : 0);
+
+  const { somaConsumo, quantidadeConsumos } = itens.reduce(
+    (acc, item) => {
+      const uso = Number(item.valor || 0);
+      const litrosMeta = extrairLitrosCalculoMeta(item.observacoes);
+      const litrosBase = litrosMeta ?? Number(item.litros || 0);
+
+      if (uso > 0 && litrosBase > 0) {
+        const consumo = isMaquina ? litrosBase / uso : uso / litrosBase;
+        return {
+          somaConsumo: acc.somaConsumo + consumo,
+          quantidadeConsumos: acc.quantidadeConsumos + 1,
+        };
+      }
+
+      return acc;
+    },
+    { somaConsumo: 0, quantidadeConsumos: 0 }
+  );
+
+  const media = quantidadeConsumos > 0 ? somaConsumo / quantidadeConsumos : 0;
 
   return {
     categoria,
     titulo,
     quantidade: itens.length,
     media,
-    totalUso,
+    totalUso: itens.reduce((acc, item) => acc + Math.max(Number(item.valor || 0), 0), 0),
     unidadeUso: isMaquina ? 'h' : 'km',
     unidadeMedia: isMaquina ? 'L/h' : 'km/L',
   };
