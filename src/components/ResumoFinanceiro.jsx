@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const ResumoFinanceiro = ({ 
   mediasCategoria,
@@ -9,6 +9,35 @@ const ResumoFinanceiro = ({
   custoGasolina, 
   formatarMoedaBR 
 }) => {
+  const [hoverInfo, setHoverInfo] = useState(null);
+
+  const handleDonutMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const distance = Math.sqrt(x * x + y * y);
+    const outerRadius = rect.width / 2;
+    const innerRadius = outerRadius * 0.45;
+
+    if (distance >= innerRadius && distance <= outerRadius) {
+      const deg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+      const angleClockwiseFromTop = (deg + 90) % 360;
+      const dieselPercent = Number(percDiesel) || 0;
+      const dieselDegrees = dieselPercent * 3.6;
+      const isDiesel = angleClockwiseFromTop < dieselDegrees;
+      const label = isDiesel ? 'Diesel' : 'Gasolina';
+      const value = isDiesel ? dieselPercent : 100 - dieselPercent;
+      setHoverInfo({ label, value });
+    } else {
+      setHoverInfo(null);
+    }
+  };
+
+  const handleDonutMouseLeave = () => setHoverInfo(null);
+
+  const dieselPercentText = `${Number(percDiesel).toFixed(1)}%`;
+  const gasolinaPercentText = `${(100 - Number(percDiesel)).toFixed(1)}%`;
+
   return (
     <div className="border-t-2 border-slate-100 pt-8 md:pt-10 space-y-6 md:space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -48,14 +77,38 @@ const ResumoFinanceiro = ({
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2 order-first md:order-none">
+        <div className="flex flex-col md:flex-row items-center gap-4 order-first md:order-none">
           <div 
-            className="w-28 h-28 md:w-32 md:h-32 rounded-full shadow-xl flex items-center justify-center relative border-4 border-white"
+            className="w-40 h-40 md:w-48 md:h-48 rounded-full shadow-2xl flex items-center justify-center relative border-4 border-white cursor-pointer"
             style={{ background: `conic-gradient(#f97316 0% ${percDiesel}%, #2563eb ${percDiesel}% 100%)` }}
+            onMouseMove={handleDonutMouseMove}
+            onMouseLeave={handleDonutMouseLeave}
+            aria-label={`Gráfico Diesel ${dieselPercentText} e Gasolina ${gasolinaPercentText}`}
           >
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-inner text-[10px] font-black">LTS</div>
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-full flex items-center justify-center shadow-inner text-[12px] md:text-sm font-black text-slate-900">
+              LTS
+            </div>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase mt-2 italic">DIESEL X GASOLINA</p>
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-[11px] md:text-xs font-black text-slate-400 uppercase italic">DIESEL X GASOLINA</p>
+            <div className="min-w-[140px] bg-slate-900 text-white text-[12px] md:text-sm font-bold px-3 py-3 rounded-2xl shadow-lg transition-all duration-200">
+              {hoverInfo ? (
+                <span>{hoverInfo.label}: {hoverInfo.value.toFixed(1)}%</span>
+              ) : (
+                <span className="text-slate-300">Passe o mouse sobre o gráfico</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 mt-2 text-left">
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <span className="w-3 h-3 rounded-full bg-[#f97316] block" />
+                <span className="font-bold">Diesel {dieselPercentText}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <span className="w-3 h-3 rounded-full bg-[#2563eb] block" />
+                <span className="font-bold">Gasolina {gasolinaPercentText}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-4">
