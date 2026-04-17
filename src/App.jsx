@@ -136,11 +136,20 @@ function App() {
       return await fetch(`${API_URL_FALLBACK}${endpoint}`, requestOptions);
     }
   };
+  const SNAPSHOTS_STORAGE_KEY = 'registros_montecristo_snapshots';
+
   const [registros, setRegistros] = useState(() => {
     const salvo = localStorage.getItem('registros_montecristo');
     return salvo ? JSON.parse(salvo) : [];
   });
-
+  const [savedSnapshots, setSavedSnapshots] = useState(() => {
+    const saved = localStorage.getItem(SNAPSHOTS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [snapshotTitle, setSnapshotTitle] = useState('');
+  const [snapshotFeedback, setSnapshotFeedback] = useState('');
+  const [loadedSnapshotTitle, setLoadedSnapshotTitle] = useState('');
+  const [previousRegistros, setPreviousRegistros] = useState(null);
   const [itemSelecionado, setItemSelecionado] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
@@ -158,6 +167,8 @@ function App() {
   const [showAdminAccessArea, setShowAdminAccessArea] = useState(false);
   const [adminUsername, setAdminUsername] = useState(() => localStorage.getItem('admin_username') || '');
   const [modoBarra, setModoBarra] = useState('valor'); // 'valor' ou 'custo'
+  const [periodo, setPeriodo] = useState('semanal'); // 'semanal' ou 'mensal'
+  const [adminTab, setAdminTab] = useState('dashboard');
   const [credentialsForm, setCredentialsForm] = useState({
     usuarioAtual: '',
     novoUsuario: '',
@@ -187,6 +198,7 @@ function App() {
     motorista: '', 
     tipo: 'Diesel', 
     categoria: 'Máquina', 
+    periodo: 'semanal',
     valor: 0, 
     valorAnterior: '',
     litros: 0, 
@@ -300,6 +312,53 @@ function App() {
     }
   };
   const formatarMoedaBR = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const saveSnapshot = () => {
+    if (!snapshotTitle.trim()) {
+      setSnapshotFeedback('Digite um título antes de salvar.');
+      return;
+    }
+    if (!registros || registros.length === 0) {
+      setSnapshotFeedback('Não há registros para salvar.');
+      return;
+    }
+    const newSnapshot = {
+      id: `${Date.now()}`,
+      title: snapshotTitle.trim(),
+      createdAt: new Date().toISOString(),
+      registros,
+    };
+    const updated = [newSnapshot, ...savedSnapshots];
+    setSavedSnapshots(updated);
+    localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(updated));
+    setSnapshotTitle('');
+    setSnapshotFeedback('Cadastro salvo com sucesso.');
+  };
+
+  const loadSnapshot = (snapshot) => {
+    if (!snapshot || !snapshot.registros) return;
+    setPreviousRegistros(registros);
+    setRegistros(snapshot.registros);
+    setLoadedSnapshotTitle(snapshot.title);
+    setSnapshotFeedback(`Cadastro "${snapshot.title}" carregado.`);
+    setAdminTab('dashboard');
+  };
+
+  const exitLoadedSnapshot = () => {
+    if (previousRegistros) {
+      setRegistros(previousRegistros);
+    }
+    setLoadedSnapshotTitle('');
+    setPreviousRegistros(null);
+    setSnapshotFeedback('Saindo do cadastro carregado.');
+    setAdminTab('saved');
+  };
+
+  const removeSnapshot = (id) => {
+    const updated = savedSnapshots.filter((snapshot) => snapshot.id !== id);
+    setSavedSnapshots(updated);
+    localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(updated));
+  };
 
   const abrirEdicao = (item) => {
     setItemEditando({
@@ -485,17 +544,18 @@ function App() {
     }
   };
 
-  const totalGeral = registros.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
-  const totalLiters = registros.reduce((acc, curr) => acc + Number(curr.litros || 0), 0);
-  const litrosDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.litros || 0), 0);
-  const litrosGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.litros || 0), 0);
-  const custoDiesel = registros.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.custo || 0), 0);
-  const custoGasolina = registros.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
+  const registrosFiltrados = registros.filter((registro) => (registro.periodo || 'semanal') === periodo);
+  const totalGeral = registrosFiltrados.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
+  const totalLiters = registrosFiltrados.reduce((acc, curr) => acc + Number(curr.litros || 0), 0);
+  const litrosDiesel = registrosFiltrados.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.litros || 0), 0);
+  const litrosGasolina = registrosFiltrados.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.litros || 0), 0);
+  const custoDiesel = registrosFiltrados.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.custo || 0), 0);
+  const custoGasolina = registrosFiltrados.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
   const percDiesel = totalLiters ? (litrosDiesel / totalLiters) * 100 : 50;
   const mediasCategoria = [
-    calcularMediaCategoria(registros, 'Máquina', 'Retro / Máquinas'),
-    calcularMediaCategoria(registros, 'Caminhão', 'Caminhões'),
-    calcularMediaCategoria(registros, 'Veículo', 'Veículos'),
+    calcularMediaCategoria(registrosFiltrados, 'Máquina', 'Retro / Máquinas'),
+    calcularMediaCategoria(registrosFiltrados, 'Caminhão', 'Caminhões'),
+    calcularMediaCategoria(registrosFiltrados, 'Veículo', 'Veículos'),
   ];
 
   return (
@@ -516,12 +576,27 @@ function App() {
                     </div>
                   </div>
                   <div className="text-left lg:text-right bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md self-start lg:self-auto w-full lg:w-auto">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo Semanal</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Custo {periodo === 'semanal' ? 'Semanal' : 'Mensal'}</p>
                     <p className="text-2xl md:text-3xl font-black text-red-500">R$ {formatarMoedaBR(totalGeral)}</p>
                   </div>
                 </div>
 
                 <div className="p-5 md:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <span className="text-base md:text-lg font-extrabold">Período:</span>
+                    <button
+                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                      onClick={() => setPeriodo('semanal')}
+                    >
+                      Semanal
+                    </button>
+                    <button
+                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                      onClick={() => setPeriodo('mensal')}
+                    >
+                      Mensal
+                    </button>
+                  </div>
                   <div className="flex flex-wrap items-center gap-3 mb-4">
                     <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
                     <button
@@ -538,11 +613,10 @@ function App() {
                     </button>
                   </div>
                   <div className="grid md:grid-cols-3 gap-8 mb-12">
-                    <ListaCliente titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
-                    <ListaCliente titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
-                    <ListaCliente titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
+                      <ListaCliente titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registrosFiltrados.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
+                      <ListaCliente titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registrosFiltrados.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
+                      <ListaCliente titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registrosFiltrados.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} aoSelecionar={setItemSelecionado} />
                   </div>
-                  
                   <ResumoFinanceiro 
                     mediasCategoria={mediasCategoria}
                     litrosDiesel={litrosDiesel} litrosGasolina={litrosGasolina} percDiesel={percDiesel} 
@@ -594,6 +668,24 @@ function App() {
                     </div>
                   ) : null}
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="text-base md:text-lg font-extrabold">Período:</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, periodo: 'semanal' })}
+                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${form.periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                >
+                  Semanal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, periodo: 'mensal' })}
+                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${form.periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                >
+                  Mensal
+                </button>
               </div>
 
               <Formulario form={form} setForm={setForm} adicionar={adicionar} />
@@ -752,35 +844,124 @@ function App() {
 
                 <div className="p-5 md:p-12">
                     <div className="flex flex-wrap items-center gap-3 mb-4">
-                      <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
                       <button
-                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'valor' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
-                        onClick={() => setModoBarra('valor')}
+                        type="button"
+                        onClick={() => setAdminTab('dashboard')}
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${adminTab === 'dashboard' ? 'bg-white text-slate-900 border border-slate-300 shadow-sm' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
                       >
-                        Horas/Km
+                        Dashboard
                       </button>
                       <button
-                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'custo' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
-                        onClick={() => setModoBarra('custo')}
+                        type="button"
+                        onClick={() => setAdminTab('saved')}
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${adminTab === 'saved' ? 'bg-white text-slate-900 border border-slate-300 shadow-sm' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
                       >
-                        Valor (R$)
+                        Cadastros Salvos
                       </button>
+                      {loadedSnapshotTitle ? (
+                        <button
+                          type="button"
+                          onClick={exitLoadedSnapshot}
+                          className="ml-auto bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                        >
+                          Sair do cadastro
+                        </button>
+                      ) : null}
                     </div>
-                    <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
-                      <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
-                      <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
-                      <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
-                    </div>
+                    {adminTab === 'dashboard' ? (
+                      <>
+                        <div className="flex flex-wrap items-center gap-3 mb-4">
+                          <span className="text-base md:text-lg font-extrabold">Escala de Barra:</span>
+                          <button
+                            className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'valor' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                            onClick={() => setModoBarra('valor')}
+                          >
+                            Horas/Km
+                          </button>
+                          <button
+                            className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${modoBarra === 'custo' ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                            onClick={() => setModoBarra('custo')}
+                          >
+                            Valor (R$)
+                          </button>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
+                          <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                          <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                          <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                        </div>
 
-                    <ResumoFinanceiro 
-                      mediasCategoria={mediasCategoria}
-                      litrosDiesel={litrosDiesel} 
-                      litrosGasolina={litrosGasolina} 
-                      percDiesel={percDiesel} 
-                      custoDiesel={custoDiesel} 
-                      custoGasolina={custoGasolina} 
-                      formatarMoedaBR={formatarMoedaBR} 
-                    />
+                        <ResumoFinanceiro 
+                          mediasCategoria={mediasCategoria}
+                          litrosDiesel={litrosDiesel} 
+                          litrosGasolina={litrosGasolina} 
+                          percDiesel={percDiesel} 
+                          custoDiesel={custoDiesel} 
+                          custoGasolina={custoGasolina} 
+                          formatarMoedaBR={formatarMoedaBR} 
+                        />
+                      </>
+                    ) : (
+                      <div className="mt-4 bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                          <div>
+                            <h2 className="font-black uppercase tracking-wider text-sm text-slate-800">Cadastros Salvos</h2>
+                            <p className="text-xs text-slate-500 mt-1">Salve o estado atual dos registros com um título e carregue novamente quando quiser.</p>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-[1fr_auto] items-end mb-4">
+                          <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Título do cadastro</label>
+                            <input
+                              type="text"
+                              value={snapshotTitle}
+                              onChange={(e) => setSnapshotTitle(e.target.value)}
+                              className="w-full bg-white border border-slate-200 p-3 rounded-xl outline-none font-bold"
+                              placeholder="Ex: Posto São João - Maio"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={saveSnapshot}
+                            className="w-full md:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-black py-3 px-5 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                          >
+                            Salvar Cadastro Atual
+                          </button>
+                        </div>
+                        {snapshotFeedback ? <p className="text-sm text-slate-700 font-semibold mb-4">{snapshotFeedback}</p> : null}
+                        {savedSnapshots.length > 0 ? (
+                          <div className="space-y-3">
+                            {savedSnapshots.map((snapshot) => (
+                              <div key={snapshot.id} className="bg-white border border-slate-200 rounded-3xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div>
+                                  <p className="font-bold text-slate-800">{snapshot.title}</p>
+                                  <p className="text-xs text-slate-500">Salvo em {new Date(snapshot.createdAt).toLocaleString('pt-BR')}</p>
+                                  <p className="text-xs text-slate-500 mt-1">{snapshot.registros.length} registro(s)</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => loadSnapshot(snapshot)}
+                                    className="bg-slate-900 hover:bg-slate-700 text-white font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                                  >
+                                    Carregar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSnapshot(snapshot.id)}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500">Nenhum cadastro salvo ainda.</p>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>,
             </div>
