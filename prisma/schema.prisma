@@ -14,6 +14,7 @@ model RegistroFrota {
   motorista    String   // Nome do motorista
   categoria    String   // "Máquina", "Caminhão" ou "Veículo"
   tipo         String   // "Diesel" ou "Gasolina"
+  periodo      String   @default("semanal") // "semanal" ou "mensal"
   valor        Float    // Horas (h) ou KM (km)
   litros       Float    // Quantidade abastecida
   precoLitro   Float    // Preço por litro
@@ -21,8 +22,18 @@ model RegistroFrota {
   observacoes  String?  @db.Text // Texto longo para as notas
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
   @@map("registros_frota") // Nome da tabela no banco de dados
+}
+
+model Snapshot {
+  id        String   @id @default(uuid())
+  title     String
+  periodo   String
+  registros Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("snapshots")
 }
 
 model AdminCredential {

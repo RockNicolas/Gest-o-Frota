@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Info, User, Gauge } from 'lucide-react';
+import { X, Info, User, Gauge, Fuel, DollarSign, Activity } from 'lucide-react';
 
 const obterLitrosCalculo = (item) => {
   const texto = String(item.observacoes || '');
@@ -43,68 +43,96 @@ const ModalDetalhes = ({ item, fechar }) => {
     : (litrosCalculo > 0 ? (item.valor / litrosCalculo).toFixed(2) : 0);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200 text-left">
-        <div className="bg-slate-900 p-5 md:p-8 text-white relative shrink-0">
-          <button onClick={fechar} className="absolute top-6 right-6 bg-white/10 p-2 rounded-full hover:bg-red-500 transition-colors">
-            <X size={20} />
-          </button>
-          <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-block">
-            Detalhes do Registro
-          </span>
-          <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter leading-none pr-12">{item.nome}</h3>
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+      <div className="bg-slate-50 rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col border border-white animate-in fade-in zoom-in duration-300">
+        
+        <div className="p-6 md:p-10 flex flex-col gap-6 overflow-y-auto">
           
-          <div className="flex items-center gap-4 mt-4 text-slate-300 font-bold uppercase tracking-widest">
-             <span className="flex items-center gap-2 text-xl">
-               <User size={24} /> 
-               {item.motorista}
-             </span>
-          </div>
-        </div>
-
-        <div className="p-5 md:p-8 space-y-6 overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Uso Registrado</p>
-              <p className="text-xl font-black text-slate-800">{formatarUso(item)} {unidadeUso}</p>
-            </div>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Volume</p>
-              <p className="text-xl font-black text-blue-600">{item.litros} Litros</p>
-            </div>
-            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 sm:col-span-2 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">{labelConsumo}</p>
-                <p className="text-2xl font-black text-blue-700">{consumoMedio} <span className="text-sm">{sufixoConsumo}</span></p>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-600 p-3 rounded-2xl shadow-lg shadow-red-200">
+                <Activity className="text-white" size={24} />
               </div>
-              <Gauge size={32} className="text-blue-200" />
+              <div>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-none uppercase tracking-tighter italic">
+                  {item.nome}
+                </h3>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Detalhes do Registro</p>
+              </div>
+            </div>
+            <button onClick={fechar} className="cursor-pointer bg-white p-3 rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-all border border-slate-100">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <div className="md:col-span-2 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between">
+               <div className="flex justify-between items-start">
+                  <span className="p-2 bg-slate-100 rounded-xl text-slate-500"><User size={20}/></span>
+                  <span className="text-[10px] font-black text-slate-300 uppercase">Motorista / Operador</span>
+               </div>
+               <p className="text-2xl font-black text-slate-800 mt-4 break-words uppercase italic">{item.motorista}</p>
+            </div>
+
+            <div className="md:col-span-1 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Uso Total</p>
+              <p className="text-3xl font-black text-slate-800 italic mt-2">{formatarUso(item)}<span className="text-sm ml-1">{unidadeUso}</span></p>
+            </div>
+
+            <div className="bg-slate-900 p-6 rounded-[2rem] flex flex-col justify-between text-white">
+               <Gauge size={24} className="text-red-500" />
+               <div className="mt-4">
+                 <p className="text-[10px] font-bold opacity-50 uppercase">{labelConsumo}</p>
+                 <p className="text-3xl font-black leading-none">{consumoMedio}</p>
+                 <p className="text-[10px] font-bold opacity-50 uppercase mt-1">{sufixoConsumo}</p>
+               </div>
+            </div>
+
+            <div className="bg-blue-600 p-6 rounded-[2rem] shadow-lg shadow-blue-100 flex flex-col justify-between text-white">
+               <Fuel size={24} className="opacity-50" />
+               <div className="mt-4">
+                 <p className="text-[10px] font-bold opacity-70 uppercase">Volume</p>
+                 <p className="text-3xl font-black">{item.litros}<span className="text-sm ml-1 font-medium">L</span></p>
+               </div>
+            </div>
+
+            <div className="md:col-span-2 bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center justify-between">
+               <div>
+                 <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Custo Total</p>
+                 <p className="text-4xl font-black text-red-600 tracking-tighter">
+                   <span className="text-lg mr-1 font-bold">R$</span>
+                   {Number(item.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                 </p>
+               </div>
+               <div className="bg-red-600 p-4 rounded-2xl text-white shadow-lg">
+                 <DollarSign size={28} />
+               </div>
+            </div>
+
+            <div className="md:col-span-1 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center justify-center">
+              {tanqueImagem ? (
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-slate-300 uppercase mb-2">Tanque</p>
+                  <img src={`/tanque/${tanqueImagem}`} alt="Nível" className="max-h-16 object-contain" />
+                </div>
+              ) : (
+                <p className="text-[10px] font-black text-slate-300 uppercase text-center">Foto N/D</p>
+              )}
             </div>
           </div>
 
-          <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100">
-            <div>
-              <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Custo Total</p>
-              <p className="text-3xl font-black text-red-600">R$ {Number(item.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Info size={16} className="text-blue-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações e Anotações</span>
+            </div>
+            <div className="text-slate-600 font-bold italic leading-relaxed text-sm md:text-base whitespace-pre-line">
+              {limparObservacoes(item.observacoes) || "Nenhuma observação registrada."}
             </div>
           </div>
 
-          {tanqueImagem ? (
-            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tanque antes do abastecimento</p>
-              <img src={`/tanque/${tanqueImagem}`} alt="Nível do tanque antes do abastecimento" className="w-full max-h-40 object-contain" />
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest">
-                <Info size={14} className="text-blue-500"/> Observações do Lançamento
-            </label>
-            <div className="whitespace-pre-wrap w-full bg-slate-50 border border-slate-200 p-5 rounded-3xl text-slate-700 font-bold italic leading-relaxed shadow-inner break-words">
-              {limparObservacoes(item.observacoes) || "Nenhuma observação técnica foi relatada."}
-            </div>
-          </div>
-
-          <button onClick={fechar} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-lg active:scale-95">
+          <button onClick={fechar} className="bg-slate-900 text-white w-full py-6 rounded-[1.5rem] font-black uppercase tracking-[0.3em] hover:bg-black transition-all shadow-xl active:scale-95 mb-2 cursor-pointer">
             Fechar Detalhes
           </button>
         </div>
