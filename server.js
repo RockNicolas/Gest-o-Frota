@@ -352,6 +352,55 @@ app.delete('/api/registros', requireAuth, async (req, res) => {
   }
 });
 
+// Rotas de Snapshots (Cadastros Salvos)
+app.get('/api/snapshots', requireAuth, async (req, res) => {
+  try {
+    const snapshots = await prisma.snapshot.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.status(200).json(snapshots);
+  } catch (error) {
+    console.error('Erro ao buscar snapshots:', error);
+    return res.status(500).json({ error: 'Erro ao buscar cadastros salvos.' });
+  }
+});
+
+app.post('/api/snapshots', requireAuth, async (req, res) => {
+  console.log('POST /api/snapshots - req.auth:', req.auth);
+  console.log('POST /api/snapshots - body:', req.body);
+  const { title, periodo, registros } = req.body;
+  if (!title || !registros || !Array.isArray(registros) || registros.length === 0) {
+    return res.status(400).json({ error: 'Título e registros são obrigatórios.' });
+  }
+  try {
+    const novoSnapshot = await prisma.snapshot.create({
+      data: {
+        title,
+        periodo: periodo || 'semanal',
+        registros,
+      },
+    });
+    return res.status(201).json(novoSnapshot);
+  } catch (error) {
+    console.error('Erro ao criar snapshot:', error);
+    return res.status(500).json({ error: 'Erro ao salvar cadastro no banco.' });
+  }
+});
+
+app.delete('/api/snapshots', requireAuth, async (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'ID do snapshot é obrigatório.' });
+  }
+  try {
+    await prisma.snapshot.delete({ where: { id } });
+    return res.status(200).json({ message: 'Cadastro salvo excluído.' });
+  } catch (error) {
+    console.error('Erro ao excluir snapshot:', error);
+    return res.status(500).json({ error: 'Erro ao excluir cadastro salvo.' });
+  }
+});
+
 const PORT = parseInt(globalThis.process.env.PORT || '3001', 10);
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`API rodando em http://127.0.0.1:${PORT}`);

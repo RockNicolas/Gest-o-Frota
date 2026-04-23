@@ -136,16 +136,12 @@ function App() {
       return await fetch(`${API_URL_FALLBACK}${endpoint}`, requestOptions);
     }
   };
-  const SNAPSHOTS_STORAGE_KEY = 'registros_montecristo_snapshots';
 
   const [registros, setRegistros] = useState(() => {
     const salvo = localStorage.getItem('registros_montecristo');
     return salvo ? JSON.parse(salvo) : [];
   });
-  const [savedSnapshots, setSavedSnapshots] = useState(() => {
-    const saved = localStorage.getItem(SNAPSHOTS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [savedSnapshots, setSavedSnapshots] = useState([]);
   const [snapshotTitle, setSnapshotTitle] = useState('');
   const [snapshotFeedback, setSnapshotFeedback] = useState('');
   const [loadedSnapshotTitle, setLoadedSnapshotTitle] = useState('');
@@ -242,9 +238,21 @@ function App() {
   useEffect(() => {
     if (isAuthenticated && authRole === 'admin') {
       carregarUsuarios();
+      carregarSnapshots();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authRole]);
+
+  const carregarSnapshots = async () => {
+    try {
+      const resp = await apiFetch('/api/snapshots');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      setSavedSnapshots(data);
+    } catch (e) {
+      console.error('Erro ao carregar snapshots:', e);
+    }
+  };
 
   const adicionar = async (e) => {
     e.preventDefault();
@@ -313,7 +321,7 @@ function App() {
   };
   const formatarMoedaBR = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const saveSnapshot = () => {
+  const saveSnapshot = async () => {
     if (!snapshotTitle.trim()) {
       setSnapshotFeedback('Digite um título antes de salvar.');
       return;
@@ -322,17 +330,28 @@ function App() {
       setSnapshotFeedback('Não há registros para salvar.');
       return;
     }
-    const newSnapshot = {
-      id: `${Date.now()}`,
-      title: snapshotTitle.trim(),
-      createdAt: new Date().toISOString(),
-      registros,
-    };
-    const updated = [newSnapshot, ...savedSnapshots];
-    setSavedSnapshots(updated);
-    localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(updated));
-    setSnapshotTitle('');
-    setSnapshotFeedback('Cadastro salvo com sucesso.');
+    try {
+      const resp = await apiFetch('/api/snapshots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: snapshotTitle.trim(),
+          periodo,
+          registros,
+        }),
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${resp.status}`);
+      }
+      const novoSnapshot = await resp.json();
+      setSavedSnapshots(prev => [novoSnapshot, ...prev]);
+      setSnapshotTitle('');
+      setSnapshotFeedback('Cadastro salvo com sucesso.');
+    } catch (e) {
+      console.error('Erro ao salvar snapshot:', e);
+      setSnapshotFeedback(`Erro: ${e.message}`);
+    }
   };
 
   const loadSnapshot = (snapshot) => {
@@ -354,10 +373,18 @@ function App() {
     setAdminTab('saved');
   };
 
-  const removeSnapshot = (id) => {
-    const updated = savedSnapshots.filter((snapshot) => snapshot.id !== id);
-    setSavedSnapshots(updated);
-    localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(updated));
+  const removeSnapshot = async (id) => {
+    try {
+      const resp = await apiFetch('/api/snapshots', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      setSavedSnapshots(prev => prev.filter((snapshot) => snapshot.id !== id));
+    } catch (e) {
+      console.error('Erro ao excluir snapshot:', e);
+      setSnapshotFeedback('Erro ao excluir do banco de dados.');
+    }
   };
 
   const abrirEdicao = (item) => {
@@ -569,7 +596,7 @@ function App() {
                   <div className="flex items-center gap-4 md:gap-6 min-w-0"> 
                     <img src="./company_2.png" alt="Logo" className="w-14 h-14 md:w-16 md:h-16 object-contain shrink-0" />
                     <div>
-                      <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">Relatório Monte Cristo</h2>
+                      <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">Monte Cristo Insight</h2>
                       <div className="flex flex-wrap items-center gap-2 mt-2 text-red-500 font-bold uppercase text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em]">
                         <TrendingUp size={14}/> Controle de Frota Ativo
                       </div>
@@ -949,7 +976,7 @@ function App() {
                                   <button
                                     type="button"
                                     onClick={() => removeSnapshot(snapshot.id)}
-                                    className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                                    className="bg-red-600 text-white hover:bg-red-700 font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
                                   >
                                     Excluir
                                   </button>
