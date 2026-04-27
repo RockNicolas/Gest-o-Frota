@@ -352,8 +352,8 @@ app.delete('/api/registros', requireAuth, async (req, res) => {
   }
 });
 
-// Rotas de Snapshots (Cadastros Salvos)
-app.get('/api/snapshots', requireAuth, async (req, res) => {
+// Rotas de Snapshots (Cadastros Salvos) — leitura pública (como /api/registros); gravar/excluir exige login
+app.get('/api/snapshots', async (req, res) => {
   try {
     const snapshots = await prisma.snapshot.findMany({
       orderBy: { createdAt: 'desc' },
@@ -369,6 +369,7 @@ app.post('/api/snapshots', requireAuth, async (req, res) => {
   console.log('POST /api/snapshots - req.auth:', req.auth);
   console.log('POST /api/snapshots - body:', req.body);
   const { title, periodo, registros } = req.body;
+  const periodoNormalizado = periodo === 'mensal' ? 'mensal' : 'semanal';
   if (!title || !registros || !Array.isArray(registros) || registros.length === 0) {
     return res.status(400).json({ error: 'Título e registros são obrigatórios.' });
   }
@@ -376,7 +377,7 @@ app.post('/api/snapshots', requireAuth, async (req, res) => {
     const novoSnapshot = await prisma.snapshot.create({
       data: {
         title,
-        periodo: periodo || 'semanal',
+        periodo: periodoNormalizado,
         registros,
       },
     });

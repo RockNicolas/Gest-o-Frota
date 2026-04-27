@@ -1,12 +1,7 @@
 import prisma from './_lib/prisma.js';
-import { getAuthPayload, isAdminAuth } from './_lib/auth.js';
+import { getAuthPayload } from './_lib/auth.js';
 
 export default async function handler(req, res) {
-  const auth = getAuthPayload(req);
-  if (!isAdminAuth(auth)) {
-    return res.status(401).json({ error: 'Acesso não autorizado.' });
-  }
-
   if (req.method === 'GET') {
     try {
       const snapshots = await prisma.snapshot.findMany({
@@ -19,8 +14,14 @@ export default async function handler(req, res) {
     }
   }
 
+  const auth = getAuthPayload(req);
+  if (!auth) {
+    return res.status(401).json({ error: 'Não autenticado.' });
+  }
+
   if (req.method === 'POST') {
     const { title, periodo, registros } = req.body;
+    const periodoNormalizado = periodo === 'mensal' ? 'mensal' : 'semanal';
     if (!title || !registros || !Array.isArray(registros) || registros.length === 0) {
       return res.status(400).json({ error: 'Título e registros são obrigatórios.' });
     }
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
       const novoSnapshot = await prisma.snapshot.create({
         data: {
           title,
-          periodo: periodo || 'semanal',
+          periodo: periodoNormalizado,
           registros,
         },
       });

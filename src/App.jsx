@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { TrendingUp, Eye, EyeOff, User, LogOut } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, User, LogOut, Archive } from 'lucide-react';
 import Formulario from './components/Formulario';
 import ListaCategoria from './components/ListaCategoria';
 import ModalEdit from './components/ModalEdit';
@@ -188,6 +188,7 @@ function App() {
   });
   const [cadastroPublicoFeedback, setCadastroPublicoFeedback] = useState({ erro: '', sucesso: '' });
   const [showSignupSecret, setShowSignupSecret] = useState(false);
+  const [clientCadastrosOpen, setClientCadastrosOpen] = useState(false);
 
   const [form, setForm] = useState({ 
     nome: '', 
@@ -326,8 +327,8 @@ function App() {
       setSnapshotFeedback('Digite um título antes de salvar.');
       return;
     }
-    if (!registros || registros.length === 0) {
-      setSnapshotFeedback('Não há registros para salvar.');
+    if (!registrosFiltrados || registrosFiltrados.length === 0) {
+      setSnapshotFeedback(`Não há registros ${periodo === 'semanal' ? 'semanais' : 'mensais'} para salvar.`);
       return;
     }
     try {
@@ -337,7 +338,7 @@ function App() {
         body: JSON.stringify({
           title: snapshotTitle.trim(),
           periodo,
-          registros,
+          registros: registrosFiltrados,
         }),
       });
       if (!resp.ok) {
@@ -347,30 +348,35 @@ function App() {
       const novoSnapshot = await resp.json();
       setSavedSnapshots(prev => [novoSnapshot, ...prev]);
       setSnapshotTitle('');
-      setSnapshotFeedback('Cadastro salvo com sucesso.');
+      setSnapshotFeedback(`Cadastro ${periodo === 'semanal' ? 'semanal' : 'mensal'} salvo com sucesso.`);
     } catch (e) {
       console.error('Erro ao salvar snapshot:', e);
       setSnapshotFeedback(`Erro: ${e.message}`);
     }
   };
 
-  const loadSnapshot = (snapshot) => {
+  const loadSnapshot = (snapshot, opts = {}) => {
     if (!snapshot || !snapshot.registros) return;
     setPreviousRegistros(registros);
     setRegistros(snapshot.registros);
+    setPeriodo(snapshot.periodo || 'semanal');
     setLoadedSnapshotTitle(snapshot.title);
     setSnapshotFeedback(`Cadastro "${snapshot.title}" carregado.`);
-    setAdminTab('dashboard');
+    if (!opts.skipAdminTab) {
+      setAdminTab('dashboard');
+    }
   };
 
-  const exitLoadedSnapshot = () => {
+  const exitLoadedSnapshot = (opts = {}) => {
     if (previousRegistros) {
       setRegistros(previousRegistros);
     }
     setLoadedSnapshotTitle('');
     setPreviousRegistros(null);
     setSnapshotFeedback('Saindo do cadastro carregado.');
-    setAdminTab('saved');
+    if (!opts.skipAdminTab) {
+      setAdminTab('saved');
+    }
   };
 
   const removeSnapshot = async (id) => {
@@ -572,6 +578,9 @@ function App() {
   };
 
   const registrosFiltrados = registros.filter((registro) => (registro.periodo || 'semanal') === periodo);
+  const snapshotsFiltradosPorPeriodo = savedSnapshots.filter(
+    (snapshot) => (snapshot.periodo || 'semanal') === periodo
+  );
   const totalGeral = registrosFiltrados.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
   const totalLiters = registrosFiltrados.reduce((acc, curr) => acc + Number(curr.litros || 0), 0);
   const litrosDiesel = registrosFiltrados.filter(r => r.tipo === 'Diesel').reduce((a, b) => a + Number(b.litros || 0), 0);
@@ -609,19 +618,46 @@ function App() {
                 </div>
 
                 <div className="p-5 md:p-12">
+                  {loadedSnapshotTitle ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-950">
+                      <p className="text-sm font-semibold">
+                        Visualizando cadastro salvo: <span className="font-black">{loadedSnapshotTitle}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => exitLoadedSnapshot({ skipAdminTab: true })}
+                        className="shrink-0 bg-amber-900 hover:bg-amber-950 text-white font-black py-2 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                      >
+                        Sair do cadastro
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <span className="text-base md:text-lg font-extrabold">Período:</span>
+                    <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                      <span className="text-base md:text-lg font-extrabold">Período:</span>
+                      <button
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                        onClick={() => setPeriodo('semanal')}
+                      >
+                        Semanal
+                      </button>
+                      <button
+                        className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                        onClick={() => setPeriodo('mensal')}
+                      >
+                        Mensal
+                      </button>
+                    </div>
                     <button
-                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
-                      onClick={() => setPeriodo('semanal')}
+                      type="button"
+                      onClick={() => {
+                        setClientCadastrosOpen(true);
+                        carregarSnapshots();
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full text-sm md:text-base font-bold bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 transition-colors w-full sm:w-auto"
                     >
-                      Semanal
-                    </button>
-                    <button
-                      className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
-                      onClick={() => setPeriodo('mensal')}
-                    >
-                      Mensal
+                      <Archive size={18} className="shrink-0" />
+                      Cadastros salvos
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -651,6 +687,71 @@ function App() {
                   />
                 </div>
               </div>
+
+              {clientCadastrosOpen ? (
+                <div
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[130] p-4 md:p-8 overflow-y-auto"
+                  onClick={() => setClientCadastrosOpen(false)}
+                  role="presentation"
+                >
+                  <div
+                    className="max-w-lg mx-auto mt-4 md:mt-12 bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-labelledby="client-cadastros-titulo"
+                  >
+                    <div className="bg-slate-900 text-white p-4 flex items-center justify-between gap-3">
+                      <h2 id="client-cadastros-titulo" className="font-black uppercase tracking-wider text-sm">
+                        Cadastros salvos
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setClientCadastrosOpen(false)}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg font-black uppercase tracking-widest"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                    <div className="p-5 md:p-6 max-h-[min(70vh,32rem)] overflow-y-auto">
+                      <p className="text-xs text-slate-500 mb-4">
+                        Carregue um cadastro para visualizar na página. Para salvar ou excluir, use o painel administrativo.
+                      </p>
+                      {snapshotsFiltradosPorPeriodo.length > 0 ? (
+                        <ul className="space-y-3">
+                          {snapshotsFiltradosPorPeriodo.map((snapshot) => (
+                            <li
+                              key={snapshot.id}
+                              className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3"
+                            >
+                              <div>
+                                <p className="font-bold text-slate-800">{snapshot.title}</p>
+                                <p className="text-xs text-slate-500">
+                                  {new Date(snapshot.createdAt).toLocaleString('pt-BR')} — {snapshot.registros.length}{' '}
+                                  registro(s)
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  loadSnapshot(snapshot, { skipAdminTab: true });
+                                  setClientCadastrosOpen(false);
+                                }}
+                                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-2.5 px-4 rounded-xl uppercase text-[10px] tracking-widest transition-all"
+                              >
+                                Carregar
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          Nenhum cadastro {periodo === 'semanal' ? 'semanal' : 'mensal'} salvo ainda.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           } />
 
@@ -701,15 +802,21 @@ function App() {
                 <span className="text-base md:text-lg font-extrabold">Período:</span>
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, periodo: 'semanal' })}
-                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${form.periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                  onClick={() => {
+                    setPeriodo('semanal');
+                    setForm((prev) => ({ ...prev, periodo: 'semanal' }));
+                  }}
+                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'semanal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
                 >
                   Semanal
                 </button>
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, periodo: 'mensal' })}
-                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${form.periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
+                  onClick={() => {
+                    setPeriodo('mensal');
+                    setForm((prev) => ({ ...prev, periodo: 'mensal' }));
+                  }}
+                  className={`px-5 py-2 rounded-full text-sm md:text-base font-bold transition-colors ${periodo === 'mensal' ? 'bg-slate-900 text-white border border-slate-900' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'}`}
                 >
                   Mensal
                 </button>
@@ -956,9 +1063,9 @@ function App() {
                           </button>
                         </div>
                         {snapshotFeedback ? <p className="text-sm text-slate-700 font-semibold mb-4">{snapshotFeedback}</p> : null}
-                        {savedSnapshots.length > 0 ? (
+                        {snapshotsFiltradosPorPeriodo.length > 0 ? (
                           <div className="space-y-3">
-                            {savedSnapshots.map((snapshot) => (
+                            {snapshotsFiltradosPorPeriodo.map((snapshot) => (
                               <div key={snapshot.id} className="bg-white border border-slate-200 rounded-3xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                 <div>
                                   <p className="font-bold text-slate-800">{snapshot.title}</p>
@@ -985,7 +1092,9 @@ function App() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-500">Nenhum cadastro salvo ainda.</p>
+                          <p className="text-sm text-slate-500">
+                            Nenhum cadastro {periodo === 'semanal' ? 'semanal' : 'mensal'} salvo ainda.
+                          </p>
                         )}
                       </div>
                     )}
