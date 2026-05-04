@@ -11,6 +11,9 @@ const OPCOES_TANQUE = [
 const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
   if (!isOpen || !item) return null;
 
+  const periodoCadastro = item.periodo === 'mensal' ? 'mensal' : 'semanal';
+  const isMensalCadastro = periodoCadastro === 'mensal';
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-50">
       <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-2xl w-full max-w-md md:max-w-2xl max-h-[92vh] overflow-hidden border border-slate-200 text-left flex flex-col">
@@ -29,6 +32,19 @@ const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
             </div>
             <div></div>
           </div>
+          <div>
+            <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">
+              Período do cadastro
+            </label>
+            <select
+              value={periodoCadastro}
+              onChange={(e) => setItem({ ...item, periodo: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-200 p-3 md:p-4 rounded-xl md:rounded-2xl font-bold text-slate-800 text-sm md:text-base cursor-pointer"
+            >
+              <option value="semanal">Semanal</option>
+              <option value="mensal">Mensal</option>
+            </select>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <div>
               <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Uso (Valor)</label>
@@ -43,25 +59,27 @@ const ModalEdit = ({ isOpen, item, setItem, salvar, fechar }) => {
               <input type="number" step="any" className="w-full bg-red-50 border border-red-200 p-3 md:p-4 rounded-xl md:rounded-2xl font-bold text-red-600 text-center text-sm md:text-base" value={item.custo} onChange={e => setItem({...item, custo: e.target.value})}/>
             </div>
           </div>
-          <div>
-            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase mb-2 md:mb-3 tracking-widest">Tanque antes do abastecimento</p>
-            <div className="flex flex-wrap gap-2 md:gap-3">
-              {OPCOES_TANQUE.map((opcao) => {
-                const selecionada = item.tanqueAntesImagem === opcao.id;
-                return (
-                  <button
-                    key={opcao.id}
-                    type="button"
-                    onClick={() => setItem({ ...item, tanqueAntesImagem: opcao.id })}
-                    className={`cursor-pointer px-3 py-2 rounded-lg md:rounded-xl border text-[9px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${selecionada ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-                  >
-                    <span className={`w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${selecionada ? 'bg-blue-600' : 'bg-slate-300'}`}></span>
-                    {opcao.label}
-                  </button>
-                );
-              })}
+          {!isMensalCadastro ? (
+            <div>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase mb-2 md:mb-3 tracking-widest">Tanque antes do abastecimento</p>
+              <div className="flex flex-wrap gap-2 md:gap-3">
+                {OPCOES_TANQUE.map((opcao) => {
+                  const selecionada = item.tanqueAntesImagem === opcao.id;
+                  return (
+                    <button
+                      key={opcao.id}
+                      type="button"
+                      onClick={() => setItem({ ...item, tanqueAntesImagem: opcao.id })}
+                      className={`cursor-pointer px-3 py-2 rounded-lg md:rounded-xl border text-[9px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${selecionada ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <span className={`w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ${selecionada ? 'bg-blue-600' : 'bg-slate-300'}`}></span>
+                      {opcao.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
           <div>
             <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase mb-2 md:mb-3 block tracking-widest">Observações e Anotações</label>
             <textarea 

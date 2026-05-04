@@ -270,6 +270,7 @@ app.post('/api/registros', requireAuth, async (req, res) => {
       motorista,
       categoria,
       tipo,
+      periodo,
       valor,
       litros,
       precoLitro,
@@ -279,6 +280,7 @@ app.post('/api/registros', requireAuth, async (req, res) => {
     const litrosNum = parseFloat(litros);
     const precoNum = parseFloat(precoLitro);
     const valorNum = parseFloat(valor);
+    const periodoNormalizado = periodo === 'mensal' ? 'mensal' : 'semanal';
 
     const novoRegistro = await prisma.registroFrota.create({
       data: {
@@ -286,6 +288,7 @@ app.post('/api/registros', requireAuth, async (req, res) => {
         motorista,
         categoria,
         tipo,
+        periodo: periodoNormalizado,
         valor: valorNum,
         litros: litrosNum,
         precoLitro: precoNum,
@@ -309,6 +312,7 @@ app.put('/api/registros', requireAuth, async (req, res) => {
       motorista,
       categoria,
       tipo,
+      periodo,
       valor,
       litros,
       precoLitro,
@@ -318,6 +322,7 @@ app.put('/api/registros', requireAuth, async (req, res) => {
     const litrosNum = parseFloat(litros);
     const precoNum = parseFloat(precoLitro);
     const valorNum = parseFloat(valor);
+    const periodoNormalizado = periodo === 'mensal' ? 'mensal' : 'semanal';
 
     const registroEditado = await prisma.registroFrota.update({
       where: { id },
@@ -326,6 +331,7 @@ app.put('/api/registros', requireAuth, async (req, res) => {
         motorista,
         categoria,
         tipo,
+        periodo: periodoNormalizado,
         valor: valorNum,
         litros: litrosNum,
         precoLitro: precoNum,

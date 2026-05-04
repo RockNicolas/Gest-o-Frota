@@ -24,16 +24,36 @@ const parseNumeroEntrada = (valor, categoria) => {
   return Number(texto.replace(',', '.'));
 };
 
+/** Exibe km/horas no padrão brasileiro (ex.: 2.166 ou 12,50 h). */
+function formatarUsoRodado(delta, isMaquina) {
+  if (!Number.isFinite(delta) || delta <= 0) return '';
+  return delta.toLocaleString(
+    'pt-BR',
+    isMaquina
+      ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+      : { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+  );
+}
+
 const Formulario = ({ form, setForm, adicionar }) => {
+  const isMensal = form.periodo === 'mensal';
   const medidorAtual = parseNumeroEntrada(form.valor, form.categoria);
   const medidorAnterior = parseNumeroEntrada(form.valorAnterior, form.categoria);
   const litrosPrimeiroAbastecimento = parseNumeroEntrada(form.litrosAnterior, form.categoria);
+  const litrosTotaisMes = parseNumeroEntrada(form.litros, form.categoria);
   const deltaUso = medidorAtual - medidorAnterior;
-  const totalHorasKm = deltaUso > 0 ? deltaUso.toFixed(2) : '';
+  const totalHorasKm = formatarUsoRodado(deltaUso, form.categoria === 'Máquina');
   const isMaquina = form.categoria === 'Máquina';
-  const consumoCalculado =
-    deltaUso > 0 && litrosPrimeiroAbastecimento > 0
-      ? (isMaquina ? (litrosPrimeiroAbastecimento / deltaUso) : (deltaUso / litrosPrimeiroAbastecimento)).toFixed(2)
+  const litrosBaseConsumo = isMensal ? litrosTotaisMes : litrosPrimeiroAbastecimento;
+  const consumoNum =
+    deltaUso > 0 && litrosBaseConsumo > 0
+      ? isMaquina
+        ? litrosBaseConsumo / deltaUso
+        : deltaUso / litrosBaseConsumo
+      : null;
+  const consumoExibicao =
+    consumoNum != null
+      ? consumoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : null;
 
   const labelTotalUso = form.categoria === 'Máquina' ? 'Total de Horas' : 'Total de KM';
@@ -63,11 +83,15 @@ const Formulario = ({ form, setForm, adicionar }) => {
           </select>
         </div>
         <div>
-          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Horímetro/KM anterior</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+            {isMensal ? 'Horímetro/KM início do mês' : 'Horímetro/KM anterior'}
+          </label>
           <input type="number" step="any" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold" value={form.valorAnterior || ''} onChange={e => setForm({...form, valorAnterior: e.target.value})}/>
         </div>
         <div>
-          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-blue-600">Horímetro/KM atual</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider text-blue-600">
+            {isMensal ? 'Horímetro/KM fim do mês' : 'Horímetro/KM atual'}
+          </label>
           <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-blue-600" value={form.valor || ''} onChange={e => setForm({...form, valor: e.target.value})}/>
         </div>
         <div>
@@ -81,18 +105,22 @@ const Formulario = ({ form, setForm, adicionar }) => {
           />
         </div>
         <div>
-          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Litros 1º abastecimento</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+            {isMensal ? 'Litros 1º abastecimento (opcional no mensal)' : 'Litros 1º abastecimento'}
+          </label>
           <input
             type="number"
             step="any"
-            required
+            required={!isMensal}
             className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-green-600"
             value={form.litrosAnterior || ''}
             onChange={e => setForm({ ...form, litrosAnterior: e.target.value })}
           />
         </div>
         <div>
-          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">Total abastecimento (Lts)</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-wider">
+            {isMensal ? 'Total abastecimento do mês (Lts)' : 'Total abastecimento (Lts)'}
+          </label>
           <input
             type="number"
             step="any"
@@ -103,31 +131,35 @@ const Formulario = ({ form, setForm, adicionar }) => {
           />
         </div>
         <div>
-          <label className="text-[10px] font-black text-red-600 uppercase mb-2 block tracking-wider">Valor Total (R$)</label>
+          <label className="text-[10px] font-black text-red-600 uppercase mb-2 block tracking-wider">
+            {isMensal ? 'Gasto total do mês (R$)' : 'Valor Total (R$)'}
+          </label>
           <input type="number" step="any" required className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none font-bold text-red-600" placeholder="0,00" value={form.custoTotal || ''} onChange={e => setForm({...form, custoTotal: e.target.value})}/>
         </div>
-        <div className="md:col-span-9">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nível do tanque antes do abastecimento</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {OPCOES_TANQUE.map((opcao) => {
-              const selecionada = form.tanqueAntesImagem === opcao.id;
-              return (
-                <button
-                  key={opcao.id}
-                  type="button"
-                  onClick={() => setForm({ ...form, tanqueAntesImagem: opcao.id })}
-                  className={`border rounded-2xl p-2 transition-all min-w-0 ${selecionada ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                >
-                  <img src={`/tanque/${opcao.id}`} alt={`Tanque ${opcao.label}`} className="w-full h-20 md:h-24 object-contain" />
-                  <p className="text-xs font-black text-slate-700 mt-2">{opcao.label}</p>
-                </button>
-              );
-            })}
+        {!isMensal ? (
+          <div className="md:col-span-9">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nível do tanque antes do abastecimento</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {OPCOES_TANQUE.map((opcao) => {
+                const selecionada = form.tanqueAntesImagem === opcao.id;
+                return (
+                  <button
+                    key={opcao.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, tanqueAntesImagem: opcao.id })}
+                    className={`border rounded-2xl p-2 transition-all min-w-0 ${selecionada ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                  >
+                    <img src={`/tanque/${opcao.id}`} alt={`Tanque ${opcao.label}`} className="w-full h-20 md:h-24 object-contain" />
+                    <p className="text-xs font-black text-slate-700 mt-2">{opcao.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {!form.tanqueAntesImagem ? (
+              <p className="text-xs font-bold text-red-600 mt-2">Selecione uma imagem do tanque para cadastrar.</p>
+            ) : null}
           </div>
-          {!form.tanqueAntesImagem ? (
-            <p className="text-xs font-bold text-red-600 mt-2">Selecione uma imagem do tanque para cadastrar.</p>
-          ) : null}
-        </div>
+        ) : null}
 
         <div className="md:col-span-9">
           <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Observações</label>
@@ -139,13 +171,15 @@ const Formulario = ({ form, setForm, adicionar }) => {
           />
         </div>
 
-        <button disabled={!form.tanqueAntesImagem} className="w-full md:w-auto bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
+        <button disabled={!isMensal && !form.tanqueAntesImagem} className="w-full md:w-auto bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 px-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Lançar</button>
         <div className="md:col-span-9 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
           <p className="text-xs font-bold text-slate-600">
-            Cálculo automático: (horímetro/km atual - anterior) e consumo = {isMaquina ? 'litros do 1º abastecimento / diferença' : 'diferença / litros do 1º abastecimento'}.
+            Cálculo automático: ({isMensal ? 'fim do mês - início do mês' : 'horímetro/km atual - anterior'}) e consumo = {isMaquina ? (isMensal ? 'litros totais do mês / diferença' : 'litros do 1º abastecimento / diferença') : (isMensal ? 'diferença / litros totais do mês' : 'diferença / litros do 1º abastecimento')}.
           </p>
           <p className="text-xs font-black text-slate-800 mt-1">
-            {labelTotalUso}: {deltaUso > 0 ? deltaUso.toFixed(2) : '0.00'} | Consumo: {consumoCalculado || '--'} {isMaquina ? 'L/h' : 'km/L'}
+            {labelTotalUso}:{' '}
+            {deltaUso > 0 ? formatarUsoRodado(deltaUso, isMaquina) : (0).toLocaleString('pt-BR')} | Consumo:{' '}
+            {consumoExibicao || '--'} {isMaquina ? 'L/h' : 'km/L'}
           </p>
         </div>
       </form>

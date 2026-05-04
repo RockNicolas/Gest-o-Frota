@@ -35,6 +35,7 @@ export default async function handler(req, res) {
 
       const litrosNum = parseFloat(litros);
       const precoNum = parseFloat(precoLitro);
+      const periodoNormalizado = periodo === 'mensal' ? 'mensal' : 'semanal';
 
       const novoRegistro = await prisma.registroFrota.create({
         data: {
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
           motorista,
           categoria,
           tipo,
-          periodo: periodo || 'semanal',
+          periodo: periodoNormalizado,
           valor: parseFloat(valor),
           litros: litrosNum,
           precoLitro: precoNum,
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
       const data = req.body;
       const litrosNum = parseFloat(data.litros);
       const precoNum = parseFloat(data.precoLitro);
+      const periodoNormalizado = data.periodo === 'mensal' ? 'mensal' : 'semanal';
 
       const registroEditado = await prisma.registroFrota.update({
         where: { id: data.id },
@@ -72,7 +74,7 @@ export default async function handler(req, res) {
           motorista: data.motorista,
           categoria: data.categoria,
           tipo: data.tipo,
-          periodo: data.periodo || 'semanal',
+          periodo: periodoNormalizado,
           valor: parseFloat(data.valor),
           litros: litrosNum,
           precoLitro: precoNum,

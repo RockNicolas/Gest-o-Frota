@@ -47,7 +47,7 @@ function extrairLitrosCalculoMeta(observacoes) {
   return Number.isFinite(valor) ? valor : null;
 }
 
-function calcularMediaCategoria(registros, categoria, titulo) {
+function calcularMediaCategoria(registros, categoria, titulo, periodoAtual) {
   const itens = registros.filter((registro) => registro.categoria === categoria);
   const isMaquina = categoria === 'Máquina';
 
@@ -55,7 +55,10 @@ function calcularMediaCategoria(registros, categoria, titulo) {
     (acc, item) => {
       const uso = Number(item.valor || 0);
       const litrosMeta = extrairLitrosCalculoMeta(item.observacoes);
-      const litrosBase = litrosMeta ?? Number(item.litros || 0);
+      const litrosBase =
+        periodoAtual === 'mensal'
+          ? Number(item.litros || 0)
+          : (litrosMeta ?? Number(item.litros || 0));
 
       if (uso > 0 && litrosBase > 0) {
         const consumo = isMaquina ? litrosBase / uso : uso / litrosBase;
@@ -262,25 +265,30 @@ function App() {
       const valorAnteriorNum = parseNumeroEntrada(form.valorAnterior, form.categoria);
       const litrosPrimeiroNum = parseNumeroEntrada(form.litrosAnterior, form.categoria);
       const litrosTotalNum = parseNumeroEntrada(form.litros, form.categoria);
+      const isMensal = form.periodo === 'mensal';
 
-      const temCalculoAuxiliar =
+      const temDeltaValido =
         Number.isFinite(valorAtualNum) &&
         Number.isFinite(valorAnteriorNum) &&
-        Number.isFinite(litrosPrimeiroNum) &&
-        valorAtualNum > valorAnteriorNum &&
-        litrosPrimeiroNum > 0;
+        valorAtualNum > valorAnteriorNum;
 
-      const valorParaSalvar = temCalculoAuxiliar ? (valorAtualNum - valorAnteriorNum) : valorAtualNum;
+      const valorParaSalvar = temDeltaValido ? (valorAtualNum - valorAnteriorNum) : valorAtualNum;
       const litrosParaSalvar = litrosTotalNum;
       const custoTotalNum = parseNumeroEntrada(form.custoTotal, form.categoria);
       const precoLitroParaSalvar = litrosParaSalvar > 0 ? (custoTotalNum / litrosParaSalvar) : 0;
-      const observacoesComMeta = montarObservacoesComMeta(form.observacoes, litrosPrimeiroNum, form.tanqueAntesImagem);
+      const litrosMetaObservacao = isMensal ? null : litrosPrimeiroNum;
+      const observacoesComMeta = montarObservacoesComMeta(
+        form.observacoes,
+        litrosMetaObservacao,
+        isMensal ? '' : form.tanqueAntesImagem
+      );
 
       const resp = await apiFetch('/api/registros', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          tanqueAntesImagem: isMensal ? '' : form.tanqueAntesImagem,
           valor: valorParaSalvar,
           litros: litrosParaSalvar,
           precoLitro: precoLitroParaSalvar,
@@ -409,13 +417,20 @@ function App() {
       const litrosNum = Number(itemEditando.litros);
       const custoNum = Number(itemEditando.custo);
       const precoLitroCalculado = litrosNum > 0 ? (custoNum / litrosNum) : 0;
-      const observacoesComMeta = montarObservacoesComMeta(itemEditando.observacoes, itemEditando.litrosCalculo, itemEditando.tanqueAntesImagem);
+      const edicaoMensal = itemEditando.periodo === 'mensal';
+      const observacoesComMeta = montarObservacoesComMeta(
+        itemEditando.observacoes,
+        edicaoMensal ? null : itemEditando.litrosCalculo,
+        edicaoMensal ? '' : itemEditando.tanqueAntesImagem
+      );
 
       const resp = await apiFetch('/api/registros', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...itemEditando,
+          tanqueAntesImagem: edicaoMensal ? '' : itemEditando.tanqueAntesImagem,
+          periodo: edicaoMensal ? 'mensal' : 'semanal',
           valor: Number(itemEditando.valor),
           litros: litrosNum,
           precoLitro: precoLitroCalculado,
@@ -589,9 +604,9 @@ function App() {
   const custoGasolina = registrosFiltrados.filter(r => r.tipo === 'Gasolina').reduce((a, b) => a + Number(b.custo || 0), 0);
   const percDiesel = totalLiters ? (litrosDiesel / totalLiters) * 100 : 50;
   const mediasCategoria = [
-    calcularMediaCategoria(registrosFiltrados, 'Máquina', 'Retro / Máquinas'),
-    calcularMediaCategoria(registrosFiltrados, 'Caminhão', 'Caminhões'),
-    calcularMediaCategoria(registrosFiltrados, 'Veículo', 'Veículos'),
+    calcularMediaCategoria(registrosFiltrados, 'Máquina', 'Retro / Máquinas', periodo),
+    calcularMediaCategoria(registrosFiltrados, 'Caminhão', 'Caminhões', periodo),
+    calcularMediaCategoria(registrosFiltrados, 'Veículo', 'Veículos', periodo),
   ];
 
   return (
@@ -1020,9 +1035,9 @@ function App() {
                           </button>
                         </div>
                         <div className="grid md:grid-cols-3 gap-8 mb-12 pb-12 border-b border-slate-100">
-                          <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registros.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
-                          <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registros.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
-                          <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registros.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                          <ListaCategoria titulo="Máquinas" icone="🚜" corBarra="border-orange-500" itens={registrosFiltrados.filter(r => r.categoria === 'Máquina')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                          <ListaCategoria titulo="Caminhões" icone="🚛" corBarra="border-green-600" itens={registrosFiltrados.filter(r => r.categoria === 'Caminhão')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
+                          <ListaCategoria titulo="Veículos" icone="🚗" corBarra="border-blue-600" itens={registrosFiltrados.filter(r => r.categoria === 'Veículo')} modoBarra={modoBarra} abrirEdicao={abrirEdicao} remover={remover} />
                         </div>
 
                         <ResumoFinanceiro 
